@@ -17,7 +17,6 @@
             align-items: center;
             min-height: 100vh;
         }
-
         .container {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
@@ -29,7 +28,6 @@
             width: 90%;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-
         h1 {
             font-weight: 800;
             margin-bottom: 10px;
@@ -38,14 +36,33 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-
         p {
             color: #aaa;
             margin-bottom: 30px;
             font-size: 14px;
             line-height: 1.5;
         }
-
+        .tabs {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 5px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .tab.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: #00d2ff;
+        }
         input {
             width: 100%;
             padding: 15px;
@@ -60,11 +77,7 @@
             text-align: center;
             font-weight: 600;
         }
-
-        input::placeholder {
-            color: #888;
-        }
-
+        input::placeholder { color: #888; }
         button {
             width: 100%;
             padding: 15px;
@@ -75,26 +88,22 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: 0.2s;
         }
-
         button:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(0, 210, 255, 0.4);
         }
-
         button:disabled {
             background: #555;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
         }
-
-        #code-display {
+        #code-display, #qr-display {
             display: none;
             margin-top: 30px;
         }
-
         .code-box {
             background: rgba(0, 0, 0, 0.3);
             padding: 20px;
@@ -106,13 +115,19 @@
             margin-bottom: 15px;
             border: 1px dashed rgba(0, 210, 255, 0.5);
         }
-
+        #qr-image {
+            width: 250px;
+            height: 250px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: white;
+        }
         .status {
             margin-top: 15px;
             font-size: 13px;
             color: #ffaa00;
         }
-
         .loader {
             display: none;
             border: 4px solid rgba(255,255,255,0.1);
@@ -123,35 +138,62 @@
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-
     <div class="container">
         <h1>Xymbot Pairing</h1>
-        <p>Enter your WhatsApp number with country code to receive an 8-digit pairing code.</p>
+        <p>Choose a method to link your WhatsApp and receive your session file.</p>
         
-        <input type="text" id="phone" placeholder="e.g. 919876543210">
-        <button id="btn" onclick="getCode()">Get Pairing Code</button>
+        <div class="tabs">
+            <div class="tab active" id="tab-code" onclick="switchTab('code')">Pairing Code</div>
+            <div class="tab" id="tab-qr" onclick="switchTab('qr')">QR Code</div>
+        </div>
+
+        <div id="section-code">
+            <input type="text" id="phone" placeholder="Phone Number (e.g. 919876543210)">
+            <button id="btn-code" onclick="getCode()">Get Pairing Code</button>
+        </div>
+
+        <div id="section-qr" style="display: none;">
+            <button id="btn-qr" onclick="getQR()">Generate QR Code</button>
+        </div>
 
         <div class="loader" id="loader"></div>
         <div class="status" id="status"></div>
 
         <div id="code-display">
             <div class="code-box" id="code">----</div>
-            <p style="margin-bottom: 0;">Enter this code in WhatsApp -> Linked Devices -> Link with Phone Number</p>
+            <p style="margin-bottom: 0;">Enter this code in WhatsApp -> Linked Devices</p>
+        </div>
+
+        <div id="qr-display">
+            <img id="qr-image" src="" alt="QR Code">
+            <p style="margin-bottom: 0;">Scan this QR with WhatsApp -> Linked Devices</p>
+            <p style="font-size: 11px; color: #ffaa00; margin-top: 5px;">Scan quickly before it expires!</p>
         </div>
     </div>
 
     <script>
+        let currentMode = 'code';
+
+        function switchTab(mode) {
+            currentMode = mode;
+            document.getElementById('tab-code').classList.toggle('active', mode === 'code');
+            document.getElementById('tab-qr').classList.toggle('active', mode === 'qr');
+            
+            document.getElementById('section-code').style.display = mode === 'code' ? 'block' : 'none';
+            document.getElementById('section-qr').style.display = mode === 'qr' ? 'block' : 'none';
+            
+            document.getElementById('code-display').style.display = 'none';
+            document.getElementById('qr-display').style.display = 'none';
+            document.getElementById('status').innerText = '';
+        }
+
         async function getCode() {
             const phoneInput = document.getElementById('phone').value;
-            const btn = document.getElementById('btn');
+            const btn = document.getElementById('btn-code');
             const loader = document.getElementById('loader');
             const status = document.getElementById('status');
             const codeDisplay = document.getElementById('code-display');
@@ -165,6 +207,7 @@
             btn.disabled = true;
             loader.style.display = 'block';
             status.innerText = "Requesting code from WhatsApp...";
+            status.style.color = "#ffaa00";
             codeDisplay.style.display = 'none';
 
             try {
@@ -182,6 +225,43 @@
                     status.style.color = "#00ff88";
                     codeBox.innerText = data.code;
                     codeDisplay.style.display = 'block';
+                }
+            } catch (err) {
+                loader.style.display = 'none';
+                btn.disabled = false;
+                status.innerText = "❌ Server error. Make sure the server is running.";
+                status.style.color = "#ff4444";
+            }
+        }
+
+        async function getQR() {
+            const btn = document.getElementById('btn-qr');
+            const loader = document.getElementById('loader');
+            const status = document.getElementById('status');
+            const qrDisplay = document.getElementById('qr-display');
+            const qrImage = document.getElementById('qr-image');
+
+            btn.disabled = true;
+            loader.style.display = 'block';
+            status.innerText = "Generating QR Code...";
+            status.style.color = "#ffaa00";
+            qrDisplay.style.display = 'none';
+
+            try {
+                const response = await fetch(`/qr`);
+                const data = await response.json();
+
+                loader.style.display = 'none';
+
+                if (data.error) {
+                    status.innerText = "❌ " + data.error;
+                    status.style.color = "#ff4444";
+                    btn.disabled = false;
+                } else if (data.qr) {
+                    status.innerText = "✅ Scan this QR Code with WhatsApp...";
+                    status.style.color = "#00ff88";
+                    qrImage.src = data.qr;
+                    qrDisplay.style.display = 'block';
                 }
             } catch (err) {
                 loader.style.display = 'none';

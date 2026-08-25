@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xymbot Pairing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e1e2f, #2a2a40);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            font-weight: 800;
+            margin-bottom: 10px;
+            font-size: 28px;
+            background: -webkit-linear-gradient(#00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: #aaa;
+            margin-bottom: 30px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            outline: none;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        input::placeholder {
+            color: #888;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.4);
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #code-display {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .code-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: 5px;
+            color: #00d2ff;
+            margin-bottom: 15px;
+            border: 1px dashed rgba(0, 210, 255, 0.5);
+        }
+
+        .status {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #ffaa00;
+        }
+
+        .loader {
+            display: none;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid #00d2ff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Xymbot Pairing</h1>
+        <p>Enter your WhatsApp number with country code to receive an 8-digit pairing code.</p>
+        
+        <input type="text" id="phone" placeholder="e.g. 919876543210">
+        <button id="btn" onclick="getCode()">Get Pairing Code</button>
+
+        <div class="loader" id="loader"></div>
+        <div class="status" id="status"></div>
+
+        <div id="code-display">
+            <div class="code-box" id="code">----</div>
+            <p style="margin-bottom: 0;">Enter this code in WhatsApp -> Linked Devices -> Link with Phone Number</p>
+        </div>
+    </div>
+
+    <script>
+        async function getCode() {
+            const phoneInput = document.getElementById('phone').value;
+            const btn = document.getElementById('btn');
+            const loader = document.getElementById('loader');
+            const status = document.getElementById('status');
+            const codeDisplay = document.getElementById('code-display');
+            const codeBox = document.getElementById('code');
+
+            if (!phoneInput) {
+                alert("Please enter a phone number!");
+                return;
+            }
+
+            btn.disabled = true;
+            loader.style.display = 'block';
+            status.innerText = "Requesting code from WhatsApp...";
+            codeDisplay.style.display = 'none';
+
+            try {
+                const response = await fetch(`/pair?phone=${encodeURIComponent(phoneInput)}`);
+                const data = await response.json();
+
+                loader.style.display = 'none';
+
+                if (data.error) {
+                    status.innerText = "❌ " + data.error;
+                    status.style.color = "#ff4444";
+                    btn.disabled = false;
+                } else if (data.code) {
+                    status.innerText = "✅ Waiting for you to link device...";
+                    status.style.color = "#00ff88";
+                    codeBox.innerText = data.code;
+                    codeDisplay.style.display = 'block';
+                }
+            } catch (err) {
+                loader.style.display = 'none';
+                btn.disabled = false;
+                status.innerText = "❌ Server error. Make sure the server is running.";
+                status.style.color = "#ff4444";
+            }
+        }
+    </script>
+</body>
+</html>

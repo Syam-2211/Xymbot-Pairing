@@ -1,2 +1,3 @@
 # Xymbot-Pairing
+PAIR
 HABIBBI ONLY ENERTAINMENT!!!

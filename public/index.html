@@ -1,275 +1,167 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xymbot Pairing</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #1e1e2f, #2a2a40);
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+const express = require('express');
+const pino = require('pino');
+const fs = require('fs');
+const AdmZip = require('adm-zip');
+const path = require('path');
+const cors = require('cors');
+const qrcode = require('qrcode');
+
+const app = express();
+app.use(cors());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Store active connections to prevent memory leaks and handle reconnects
+const activeSessions = {};
+
+async function startAuth(id, type, res) {
+    const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, delay } = await import('@whiskeysockets/baileys');
+    const sessionDir = path.join(__dirname, `session-${id}`);
+    
+    // Clear old corrupted sessions if this is a fresh request
+    if (!activeSessions[id] && fs.existsSync(sessionDir)) {
+        fs.rmSync(sessionDir, { recursive: true, force: true });
+    }
+
+    const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+    const { version } = await fetchLatestBaileysVersion();
+
+    const conn = makeWASocket({
+        version,
+        printQRInTerminal: false,
+        logger: pino({ level: 'silent' }),
+        browser: ["Xymbot", "Desktop", "1.0.0"],
+        auth: {
+            creds: state.creds,
+            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "silent" })),
         }
-        .container {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            max-width: 400px;
-            width: 90%;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+    });
+
+    activeSessions[id] = conn;
+    let isResponded = false; // Prevent sending multiple Express responses
+
+    // If pairing code mode
+    if (type === 'code') {
+        if (!conn.authState.creds.registered) {
+            setTimeout(async () => {
+                try {
+                    let code = await conn.requestPairingCode(id);
+                    code = code?.match(/.{1,4}/g)?.join('-') || code;
+                    if (!isResponded) {
+                        res.json({ code });
+                        isResponded = true;
+                    }
+                } catch (err) {
+                    console.error("Pairing Code Error:", err.message);
+                    if (!isResponded) {
+                        res.json({ error: "Failed to fetch code from WhatsApp servers. Please try again." });
+                        isResponded = true;
+                    }
+                }
+            }, 3000); 
+        } else {
+            if (!isResponded) {
+                res.json({ error: "Already registered. Try a different number." });
+                isResponded = true;
+            }
         }
-        h1 {
-            font-weight: 800;
-            margin-bottom: 10px;
-            font-size: 28px;
-            background: -webkit-linear-gradient(#00d2ff, #3a7bd5);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        p {
-            color: #aaa;
-            margin-bottom: 30px;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        .tabs {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 25px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 10px;
-            padding: 5px;
-        }
-        .tab {
-            flex: 1;
-            padding: 10px;
-            cursor: pointer;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            transition: 0.3s;
-        }
-        .tab.active {
-            background: rgba(255, 255, 255, 0.1);
-            color: #00d2ff;
-        }
-        input {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            font-size: 16px;
-            margin-bottom: 20px;
-            box-sizing: border-box;
-            outline: none;
-            text-align: center;
-            font-weight: 600;
-        }
-        input::placeholder { color: #888; }
-        button {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #00d2ff, #3a7bd5);
-            color: #fff;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.4);
-        }
-        button:disabled {
-            background: #555;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        #code-display, #qr-display {
-            display: none;
-            margin-top: 30px;
-        }
-        .code-box {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 20px;
-            border-radius: 15px;
-            font-size: 36px;
-            font-weight: 800;
-            letter-spacing: 5px;
-            color: #00d2ff;
-            margin-bottom: 15px;
-            border: 1px dashed rgba(0, 210, 255, 0.5);
-        }
-        #qr-image {
-            width: 250px;
-            height: 250px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: white;
-        }
-        .status {
-            margin-top: 15px;
-            font-size: 13px;
-            color: #ffaa00;
-        }
-        .loader {
-            display: none;
-            border: 4px solid rgba(255,255,255,0.1);
-            border-top: 4px solid #00d2ff;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Xymbot Pairing</h1>
-        <p>Choose a method to link your WhatsApp and receive your session file.</p>
+    }
+
+    conn.ev.on('creds.update', saveCreds);
+
+    conn.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect, qr } = update;
         
-        <div class="tabs">
-            <div class="tab active" id="tab-code" onclick="switchTab('code')">Pairing Code</div>
-            <div class="tab" id="tab-qr" onclick="switchTab('qr')">QR Code</div>
-        </div>
-
-        <div id="section-code">
-            <input type="text" id="phone" placeholder="Phone Number (e.g. 919876543210)">
-            <button id="btn-code" onclick="getCode()">Get Pairing Code</button>
-        </div>
-
-        <div id="section-qr" style="display: none;">
-            <button id="btn-qr" onclick="getQR()">Generate QR Code</button>
-        </div>
-
-        <div class="loader" id="loader"></div>
-        <div class="status" id="status"></div>
-
-        <div id="code-display">
-            <div class="code-box" id="code">----</div>
-            <p style="margin-bottom: 0;">Enter this code in WhatsApp -> Linked Devices</p>
-        </div>
-
-        <div id="qr-display">
-            <img id="qr-image" src="" alt="QR Code">
-            <p style="margin-bottom: 0;">Scan this QR with WhatsApp -> Linked Devices</p>
-            <p style="font-size: 11px; color: #ffaa00; margin-top: 5px;">Scan quickly before it expires!</p>
-        </div>
-    </div>
-
-    <script>
-        let currentMode = 'code';
-
-        function switchTab(mode) {
-            currentMode = mode;
-            document.getElementById('tab-code').classList.toggle('active', mode === 'code');
-            document.getElementById('tab-qr').classList.toggle('active', mode === 'qr');
-            
-            document.getElementById('section-code').style.display = mode === 'code' ? 'block' : 'none';
-            document.getElementById('section-qr').style.display = mode === 'qr' ? 'block' : 'none';
-            
-            document.getElementById('code-display').style.display = 'none';
-            document.getElementById('qr-display').style.display = 'none';
-            document.getElementById('status').innerText = '';
+        // If QR mode and QR is emitted
+        if (type === 'qr' && qr && !isResponded) {
+            try {
+                const qrImage = await qrcode.toDataURL(qr);
+                res.json({ qr: qrImage, id: id });
+                isResponded = true;
+            } catch (err) {
+                res.json({ error: "Failed to generate QR Code image." });
+                isResponded = true;
+            }
         }
 
-        async function getCode() {
-            const phoneInput = document.getElementById('phone').value;
-            const btn = document.getElementById('btn-code');
-            const loader = document.getElementById('loader');
-            const status = document.getElementById('status');
-            const codeDisplay = document.getElementById('code-display');
-            const codeBox = document.getElementById('code');
-
-            if (!phoneInput) {
-                alert("Please enter a phone number!");
-                return;
+        if (connection === 'close') {
+            const reason = lastDisconnect.error?.output?.statusCode;
+            
+            if (reason === DisconnectReason.loggedOut) {
+                console.log(`Logged out for ${id}.`);
+                fs.rmSync(sessionDir, { recursive: true, force: true });
+                delete activeSessions[id];
+            } else {
+                console.log(`Connection dropped for ${id} (Reason: ${reason}). Reconnecting...`);
+                // Auto-reconnect
+                startAuth(id, type, { json: () => {} }); // Dummy res
             }
-
-            btn.disabled = true;
-            loader.style.display = 'block';
-            status.innerText = "Requesting code from WhatsApp...";
-            status.style.color = "#ffaa00";
-            codeDisplay.style.display = 'none';
+        } else if (connection === 'open') {
+            console.log(`Successfully paired with ${id}! Sending creds...`);
+            
+            await delay(3000);
 
             try {
-                const response = await fetch(`/pair?phone=${encodeURIComponent(phoneInput)}`);
-                const data = await response.json();
+                const zipPath = path.join(__dirname, `session-${id}.zip`);
+                const zip = new AdmZip();
+                zip.addLocalFolder(sessionDir);
+                zip.writeZip(zipPath);
 
-                loader.style.display = 'none';
+                const userJid = conn.user.id.split(':')[0] + '@s.whatsapp.net';
+                
+                await conn.sendMessage(userJid, {
+                    document: fs.readFileSync(zipPath),
+                    mimetype: 'application/zip',
+                    fileName: 'Xymbot-Session.zip',
+                    caption: '🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊\n\n*✅ Pairing Successful!*\n\nHere is your `session` zip file.\n\n*How to use:*\n1. Download this zip file.\n2. Extract it.\n3. Put the contents into your bot\'s `session` folder.\n4. Restart the bot.\n\n⚠️ *DO NOT SHARE THIS FILE WITH ANYONE!*'
+                });
 
-                if (data.error) {
-                    status.innerText = "❌ " + data.error;
-                    status.style.color = "#ff4444";
-                    btn.disabled = false;
-                } else if (data.code) {
-                    status.innerText = "✅ Waiting for you to link device...";
-                    status.style.color = "#00ff88";
-                    codeBox.innerText = data.code;
-                    codeDisplay.style.display = 'block';
-                }
+                const credsFile = fs.readFileSync(path.join(sessionDir, 'creds.json'));
+                const base64Creds = Buffer.from(credsFile).toString('base64');
+                await conn.sendMessage(userJid, {
+                    text: `*Base64 Session ID:*\n\nXYMBOT~${base64Creds}`
+                });
+
+                console.log(`Sent session files to ${id}. Cleaning up...`);
+                
+                fs.unlinkSync(zipPath);
+                fs.rmSync(sessionDir, { recursive: true, force: true });
+                delete activeSessions[id];
+                
+                conn.end(new Error("Finished pairing"));
             } catch (err) {
-                loader.style.display = 'none';
-                btn.disabled = false;
-                status.innerText = "❌ Server error. Make sure the server is running.";
-                status.style.color = "#ff4444";
+                console.error("Archive error:", err);
             }
         }
+    });
+}
 
-        async function getQR() {
-            const btn = document.getElementById('btn-qr');
-            const loader = document.getElementById('loader');
-            const status = document.getElementById('status');
-            const qrDisplay = document.getElementById('qr-display');
-            const qrImage = document.getElementById('qr-image');
+// Endpoint for 8-digit Pairing Code
+app.get('/pair', async (req, res) => {
+    let phone = req.query.phone;
+    if (!phone) return res.json({ error: "Please provide a phone number." });
+    phone = phone.replace(/[^0-9]/g, '');
 
-            btn.disabled = true;
-            loader.style.display = 'block';
-            status.innerText = "Generating QR Code...";
-            status.style.color = "#ffaa00";
-            qrDisplay.style.display = 'none';
+    req.setTimeout(15000, () => res.json({ error: "WhatsApp servers took too long to respond. Try again." }));
 
-            try {
-                const response = await fetch(`/qr`);
-                const data = await response.json();
+    try { await startAuth(phone, 'code', res); } 
+    catch (e) { res.json({ error: "Internal server error" }); }
+});
 
-                loader.style.display = 'none';
+// Endpoint for QR Code
+app.get('/qr', async (req, res) => {
+    let id = "QR-" + Date.now(); // Generate random session ID
 
-                if (data.error) {
-                    status.innerText = "❌ " + data.error;
-                    status.style.color = "#ff4444";
-                    btn.disabled = false;
-                } else if (data.qr) {
-                    status.innerText = "✅ Scan this QR Code with WhatsApp...";
-                    status.style.color = "#00ff88";
-                    qrImage.src = data.qr;
-                    qrDisplay.style.display = 'block';
-                }
-            } catch (err) {
-                loader.style.display = 'none';
-                btn.disabled = false;
-                status.innerText = "❌ Server error. Make sure the server is running.";
-                status.style.color = "#ff4444";
-            }
-        }
-    </script>
-</body>
-</html>
+    req.setTimeout(15000, () => res.json({ error: "WhatsApp servers took too long to respond. Try again." }));
+
+    try { await startAuth(id, 'qr', res); } 
+    catch (e) { res.json({ error: "Internal server error" }); }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Xymbot Pairing Server is running on port ${PORT}`);
+});

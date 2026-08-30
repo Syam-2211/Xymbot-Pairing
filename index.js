@@ -11,9 +11,12 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 2. PAIRING CODE ROUTE (WITH SHORT ID)
+// 2. PAIRING CODE ROUTE (WITH CUSTOM PREFIX & SHORT ID)
 app.get('/pair', async (req, res) => {
     let num = req.query.phone;
+    // Catch the custom prefix from the frontend, default to XYMBOT if empty
+    let prefix = req.query.prefix ? req.query.prefix.toUpperCase() : 'XYMBOT';
+    
     if (!num) return res.json({ error: 'Please provide a WhatsApp number!' });
 
     try {
@@ -65,7 +68,9 @@ app.get('/pair', async (req, res) => {
                     
                     const pasteUrl = await response.text(); 
                     const shortId = pasteUrl.trim().split('/').pop(); 
-                    const sessionString = `XYMBOT~${shortId}`;
+                    
+                    // Creates the final string: e.g. SNEHA~XYZ123
+                    const sessionString = `${prefix}~${shortId}`;
                     
                     await conn.sendMessage(conn.user.id, { text: sessionString });
                     await conn.sendMessage(conn.user.id, { text: "⚠️ *DO NOT SHARE THIS CODE WITH ANYONE!* ⚠️\n\nCopy the text above and set it as your `SESSION_ID` environment variable on Render/Zeabur." });
@@ -84,8 +89,10 @@ app.get('/pair', async (req, res) => {
     }
 });
 
-// 3. QR CODE ROUTE (WITH SHORT ID)
+// 3. QR CODE ROUTE (WITH CUSTOM PREFIX & SHORT ID)
 app.get('/qr', async (req, res) => {
+    let prefix = req.query.prefix ? req.query.prefix.toUpperCase() : 'XYMBOT';
+
     try {
         const { default: makeWASocket, useMultiFileAuthState, makeCacheableSignalKeyStore, delay } = await import('@whiskeysockets/baileys');
         
@@ -135,7 +142,9 @@ app.get('/qr', async (req, res) => {
                     
                     const pasteUrl = await response.text(); 
                     const shortId = pasteUrl.trim().split('/').pop(); 
-                    const sessionString = `XYMBOT~${shortId}`;
+                    
+                    // Creates the final string: e.g. SNEHA~XYZ123
+                    const sessionString = `${prefix}~${shortId}`;
                     
                     await conn.sendMessage(conn.user.id, { text: sessionString });
                     await conn.sendMessage(conn.user.id, { text: "⚠️ *DO NOT SHARE THIS CODE WITH ANYONE!* ⚠️\n\nCopy the text above and set it as your `SESSION_ID` environment variable on Render/Zeabur." });

@@ -3,160 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xymbot Pairing</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <title>🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊 Pairing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Include Anime.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #1e1e2f, #2a2a40);
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Inter', sans-serif; 
+            background-color: #0f0c29; /* Deep space background */
+            color: #fff; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            overflow-x: hidden;
         }
-        .container {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            max-width: 400px;
-            width: 90%;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+
+        /* Animated Background Orbs */
+        .bg-shapes {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
         }
-        h1 {
-            font-weight: 800;
-            margin-bottom: 10px;
-            font-size: 28px;
-            background: -webkit-linear-gradient(#00d2ff, #3a7bd5);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        p {
-            color: #aaa;
-            margin-bottom: 30px;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        .tabs {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 25px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 10px;
-            padding: 5px;
-        }
-        .tab {
-            flex: 1;
-            padding: 10px;
-            cursor: pointer;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            transition: 0.3s;
-        }
-        .tab.active {
-            background: rgba(255, 255, 255, 0.1);
-            color: #00d2ff;
-        }
-        input {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            font-size: 16px;
-            margin-bottom: 20px;
-            box-sizing: border-box;
-            outline: none;
-            text-align: center;
-            font-weight: 600;
-        }
-        input::placeholder { color: #888; }
-        button {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #00d2ff, #3a7bd5);
-            color: #fff;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.4);
-        }
-        button:disabled {
-            background: #555;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        #code-display, #qr-display {
-            display: none;
-            margin-top: 30px;
-        }
-        .code-box {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 20px;
-            border-radius: 15px;
-            font-size: 36px;
-            font-weight: 800;
-            letter-spacing: 5px;
-            color: #00d2ff;
-            margin-bottom: 15px;
-            border: 1px dashed rgba(0, 210, 255, 0.5);
-        }
-        #qr-image {
-            width: 250px;
-            height: 250px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: white;
-        }
-        .status {
-            margin-top: 15px;
-            font-size: 13px;
-            color: #ffaa00;
-        }
-        .loader {
-            display: none;
-            border: 4px solid rgba(255,255,255,0.1);
-            border-top: 4px solid #00d2ff;
+        .orb {
+            position: absolute;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
+            filter: blur(80px);
+            opacity: 0.7;
         }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .orb-1 { width: 400px; height: 400px; background: #ff007f; top: -100px; left: -100px; }
+        .orb-2 { width: 500px; height: 500px; background: #00d2ff; bottom: -150px; right: -100px; }
+        .orb-3 { width: 350px; height: 350px; background: #7209b7; top: 40%; left: 40%; }
+
+        /* Maximalist Glassmorphism Container */
+        .container { 
+            position: relative;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.03); 
+            backdrop-filter: blur(25px); 
+            -webkit-backdrop-filter: blur(25px);
+            padding: 40px; 
+            border-radius: 24px; 
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1); 
+            text-align: center; 
+            max-width: 420px; 
+            width: 90%; 
+            overflow: hidden;
+        }
+
+        h1 { 
+            font-weight: 800; 
+            margin-bottom: 5px; 
+            font-size: 32px; 
+            background: linear-gradient(135deg, #fff, #a5b4fc); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+        }
+        p.subtitle { color: #c7d2fe; margin-bottom: 30px; font-size: 14px; font-weight: 300; }
+
+        /* Glass Inputs */
+        input { 
+            width: 100%; 
+            padding: 16px; 
+            border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 12px; 
+            background: rgba(0, 0, 0, 0.2); 
+            color: #fff; 
+            font-size: 15px; 
+            margin-bottom: 20px; 
+            box-sizing: border-box; 
+            outline: none; 
+            text-align: center; 
+            font-weight: 600; 
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        input:focus { border-color: #00d2ff; box-shadow: 0 0 15px rgba(0, 210, 255, 0.3); background: rgba(0, 0, 0, 0.4); }
+        input::placeholder { color: #6b7280; font-weight: 400; }
+
+        /* Tabs */
+        .tabs { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-bottom: 25px; 
+            background: rgba(0,0,0,0.3); 
+            border-radius: 14px; 
+            padding: 6px; 
+            position: relative;
+        }
+        .tab { 
+            flex: 1; 
+            padding: 12px; 
+            cursor: pointer; 
+            border-radius: 10px; 
+            font-size: 14px; 
+            font-weight: 600; 
+            transition: color 0.3s; 
+            z-index: 2;
+        }
+        .tab.active { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .tab:not(.active) { color: #6b7280; }
+        
+        /* The sliding active pill for tabs */
+        .tab-indicator {
+            position: absolute;
+            top: 6px; left: 6px;
+            height: calc(100% - 12px);
+            width: calc(50% - 6px);
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1;
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* Glass Buttons */
+        button { 
+            width: 100%; 
+            padding: 16px; 
+            border: 1px solid rgba(255,255,255,0.2); 
+            border-radius: 12px; 
+            background: linear-gradient(135deg, rgba(0, 210, 255, 0.4), rgba(58, 123, 213, 0.4)); 
+            color: #fff; 
+            font-size: 16px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            backdrop-filter: blur(10px);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        button:hover { 
+            background: linear-gradient(135deg, rgba(0, 210, 255, 0.6), rgba(58, 123, 213, 0.6)); 
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.4); 
+            transform: translateY(-2px);
+        }
+        button:disabled { background: rgba(255,255,255,0.05); color: #6b7280; border-color: rgba(255,255,255,0.05); cursor: not-allowed; box-shadow: none; transform: none; }
+
+        /* Dynamic Elements */
+        #code-display, #qr-display { display: none; margin-top: 30px; }
+        .code-box { 
+            background: rgba(0, 0, 0, 0.4); 
+            padding: 25px 20px; 
+            border-radius: 16px; 
+            font-size: 38px; 
+            font-weight: 800; 
+            letter-spacing: 8px; 
+            color: #00d2ff; 
+            margin-bottom: 15px; 
+            border: 1px dashed rgba(0, 210, 255, 0.4); 
+            text-shadow: 0 0 15px rgba(0, 210, 255, 0.3);
+        }
+        #qr-image { width: 220px; height: 220px; border-radius: 16px; margin-bottom: 15px; padding: 12px; background: rgba(255,255,255,0.9); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .status { margin-top: 15px; font-size: 13px; font-weight: 600; color: #fbbf24; height: 20px; }
+        
+        .loader { 
+            display: none; 
+            width: 40px; height: 40px; 
+            margin: 20px auto; 
+            border: 3px solid rgba(255,255,255,0.1); 
+            border-radius: 50%; 
+            border-top-color: #00d2ff; 
+            animation: spin 1s ease-in-out infinite; 
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Ownership Tag */
+        .credit {
+            margin-top: 30px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 1px;
+        }
     </style>
 </head>
 <body>
+    
+    <!-- Floating Background Orbs -->
+    <div class="bg-shapes">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Main Glass UI -->
     <div class="container">
-        <h1>Xymbot Pairing</h1>
-        <p>Choose a method to link your WhatsApp and receive your session file.</p>
+        <h1 class="stagger-item">Bot Pairing</h1>
+        <p class="subtitle stagger-item">Enter a custom name and link your WhatsApp!</p>
         
-        <div class="tabs">
+        <input type="text" id="custom-prefix" class="stagger-item" placeholder="Custom Bot Name (e.g. SNEHA)">
+
+        <div class="tabs stagger-item">
+            <div class="tab-indicator" id="tab-indicator"></div>
             <div class="tab active" id="tab-code" onclick="switchTab('code')">Pairing Code</div>
             <div class="tab" id="tab-qr" onclick="switchTab('qr')">QR Code</div>
         </div>
 
-        <div id="section-code">
+        <div id="section-code" class="stagger-item">
             <input type="text" id="phone" placeholder="Phone Number (e.g. 919876543210)">
             <button id="btn-code" onclick="getCode()">Get Pairing Code</button>
         </div>
 
-        <div id="section-qr" style="display: none;">
+        <div id="section-qr" class="stagger-item" style="display: none;">
             <button id="btn-qr" onclick="getQR()">Generate QR Code</button>
         </div>
 
@@ -165,34 +218,100 @@
 
         <div id="code-display">
             <div class="code-box" id="code">----</div>
-            <p style="margin-bottom: 0;">Enter this code in WhatsApp -> Linked Devices</p>
+            <p style="margin-bottom: 0; color: #a5b4fc; font-size: 13px;">Enter this code in WhatsApp -> Linked Devices</p>
         </div>
 
         <div id="qr-display">
             <img id="qr-image" src="" alt="QR Code">
-            <p style="margin-bottom: 0;">Scan this QR with WhatsApp -> Linked Devices</p>
-            <p style="font-size: 11px; color: #ffaa00; margin-top: 5px;">Scan quickly before it expires!</p>
+            <p style="margin-bottom: 0; color: #a5b4fc; font-size: 13px;">Scan this QR with WhatsApp -> Linked Devices</p>
         </div>
+
+        <div class="credit stagger-item">🤍⃞𝄟ꪶ𝐒͢ʏ᪳ᴀ͓м͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓</div>
     </div>
 
     <script>
-        let currentMode = 'code';
+        // ─── ANIME.JS ANIMATIONS ───
+        
+        // 1. Organic Floating Orbs Background
+        anime({
+            targets: '.orb',
+            translateX: function() { return anime.random(-50, 50); },
+            translateY: function() { return anime.random(-50, 50); },
+            scale: function() { return anime.random(0.8, 1.2); },
+            easing: 'easeInOutSine',
+            duration: 5000,
+            direction: 'alternate',
+            loop: true
+        });
+
+        // 2. Staggered Entrance Animation for UI elements
+        anime({
+            targets: '.stagger-item',
+            translateY: [30, 0],
+            opacity: [0, 1],
+            delay: anime.stagger(100, {start: 300}),
+            easing: 'easeOutExpo',
+            duration: 1000
+        });
+
+        // ─── LOGIC ───
 
         function switchTab(mode) {
-            currentMode = mode;
+            // Animate the Tab Indicator Pill
+            const indicator = document.getElementById('tab-indicator');
+            if (mode === 'qr') {
+                indicator.style.transform = 'translateX(100%)';
+            } else {
+                indicator.style.transform = 'translateX(0)';
+            }
+
             document.getElementById('tab-code').classList.toggle('active', mode === 'code');
             document.getElementById('tab-qr').classList.toggle('active', mode === 'qr');
             
-            document.getElementById('section-code').style.display = mode === 'code' ? 'block' : 'none';
-            document.getElementById('section-qr').style.display = mode === 'qr' ? 'block' : 'none';
+            // Fade out current section, swap display, fade in new section
+            const oldSection = mode === 'code' ? '#section-qr' : '#section-code';
+            const newSection = mode === 'code' ? '#section-code' : '#section-qr';
+            
+            anime({
+                targets: oldSection,
+                opacity: 0,
+                duration: 200,
+                easing: 'linear',
+                complete: function() {
+                    document.querySelector(oldSection).style.display = 'none';
+                    document.querySelector(newSection).style.display = 'block';
+                    anime({
+                        targets: newSection,
+                        opacity: [0, 1],
+                        translateY: [10, 0],
+                        duration: 400,
+                        easing: 'easeOutExpo'
+                    });
+                }
+            });
             
             document.getElementById('code-display').style.display = 'none';
             document.getElementById('qr-display').style.display = 'none';
             document.getElementById('status').innerText = '';
         }
 
+        // Button click animation helper
+        function animateButton(target) {
+            anime({
+                targets: target,
+                scale: [0.95, 1],
+                duration: 400,
+                easing: 'easeOutElastic'
+            });
+        }
+
         async function getCode() {
+            animateButton('#btn-code');
+            
             const phoneInput = document.getElementById('phone').value;
+            let prefixInput = document.getElementById('custom-prefix').value.trim().toUpperCase() || 'XYMBOT';
+            prefixInput = prefixInput.replace(/[^A-Z0-9]/g, '');
+
             const btn = document.getElementById('btn-code');
             const loader = document.getElementById('loader');
             const status = document.getElementById('status');
@@ -200,41 +319,56 @@
             const codeBox = document.getElementById('code');
 
             if (!phoneInput) {
-                alert("Please enter a phone number!");
+                // Shake error animation
+                anime({ targets: '#phone', translateX: [0, -10, 10, -10, 10, 0], duration: 400 });
                 return;
             }
 
             btn.disabled = true;
             loader.style.display = 'block';
             status.innerText = "Requesting code from WhatsApp...";
-            status.style.color = "#ffaa00";
+            status.style.color = "#fbbf24";
             codeDisplay.style.display = 'none';
 
             try {
-                const response = await fetch(`/pair?phone=${encodeURIComponent(phoneInput)}`);
+                const response = await fetch(`/pair?phone=${encodeURIComponent(phoneInput)}&prefix=${encodeURIComponent(prefixInput)}`);
                 const data = await response.json();
 
                 loader.style.display = 'none';
 
                 if (data.error) {
                     status.innerText = "❌ " + data.error;
-                    status.style.color = "#ff4444";
+                    status.style.color = "#ef4444";
                     btn.disabled = false;
                 } else if (data.code) {
                     status.innerText = "✅ Waiting for you to link device...";
-                    status.style.color = "#00ff88";
+                    status.style.color = "#34d399";
                     codeBox.innerText = data.code;
                     codeDisplay.style.display = 'block';
+                    
+                    // Animate the code box popping in
+                    anime({
+                        targets: '#code-display',
+                        scale: [0.8, 1],
+                        opacity: [0, 1],
+                        duration: 600,
+                        easing: 'easeOutElastic'
+                    });
                 }
             } catch (err) {
                 loader.style.display = 'none';
                 btn.disabled = false;
                 status.innerText = "❌ Server error. Make sure the server is running.";
-                status.style.color = "#ff4444";
+                status.style.color = "#ef4444";
             }
         }
 
         async function getQR() {
+            animateButton('#btn-qr');
+
+            let prefixInput = document.getElementById('custom-prefix').value.trim().toUpperCase() || 'XYMBOT';
+            prefixInput = prefixInput.replace(/[^A-Z0-9]/g, '');
+
             const btn = document.getElementById('btn-qr');
             const loader = document.getElementById('loader');
             const status = document.getElementById('status');
@@ -244,30 +378,39 @@
             btn.disabled = true;
             loader.style.display = 'block';
             status.innerText = "Generating QR Code...";
-            status.style.color = "#ffaa00";
+            status.style.color = "#fbbf24";
             qrDisplay.style.display = 'none';
 
             try {
-                const response = await fetch(`/qr`);
+                const response = await fetch(`/qr?prefix=${encodeURIComponent(prefixInput)}`);
                 const data = await response.json();
 
                 loader.style.display = 'none';
 
                 if (data.error) {
                     status.innerText = "❌ " + data.error;
-                    status.style.color = "#ff4444";
+                    status.style.color = "#ef4444";
                     btn.disabled = false;
                 } else if (data.qr) {
                     status.innerText = "✅ Scan this QR Code with WhatsApp...";
-                    status.style.color = "#00ff88";
+                    status.style.color = "#34d399";
                     qrImage.src = data.qr;
                     qrDisplay.style.display = 'block';
+
+                    // Animate QR code popping in
+                    anime({
+                        targets: '#qr-display',
+                        scale: [0.8, 1],
+                        opacity: [0, 1],
+                        duration: 600,
+                        easing: 'easeOutElastic'
+                    });
                 }
             } catch (err) {
                 loader.style.display = 'none';
                 btn.disabled = false;
                 status.innerText = "❌ Server error. Make sure the server is running.";
-                status.style.color = "#ff4444";
+                status.style.color = "#ef4444";
             }
         }
     </script>

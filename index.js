@@ -1,4 +1,5 @@
 const express = require('express');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, delay } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
 const AdmZip = require('adm-zip');
@@ -14,14 +15,11 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Store active connections to prevent memory leaks and handle reconnects
 const activeSessions = {};
 
 async function startAuth(id, type, res) {
-    const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, delay } = await import('@whiskeysockets/baileys');
     const sessionDir = path.join(__dirname, `session-${id}`);
     
-    // Clear old corrupted sessions if this is a fresh request
     if (!activeSessions[id] && fs.existsSync(sessionDir)) {
         fs.rmSync(sessionDir, { recursive: true, force: true });
     }
@@ -41,9 +39,8 @@ async function startAuth(id, type, res) {
     });
 
     activeSessions[id] = conn;
-    let isResponded = false; // Prevent sending multiple Express responses
+    let isResponded = false; 
 
-    // If pairing code mode
     if (type === 'code') {
         if (!conn.authState.creds.registered) {
             setTimeout(async () => {
@@ -55,7 +52,6 @@ async function startAuth(id, type, res) {
                         isResponded = true;
                     }
                 } catch (err) {
-                    console.error("Pairing Code Error:", err.message);
                     if (!isResponded) {
                         res.json({ error: "Failed to fetch code from WhatsApp servers. Please try again." });
                         isResponded = true;
@@ -75,7 +71,6 @@ async function startAuth(id, type, res) {
     conn.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
         
-        // If QR mode and QR is emitted
         if (type === 'qr' && qr && !isResponded) {
             try {
                 const qrImage = await qrcode.toDataURL(qr);
@@ -91,13 +86,10 @@ async function startAuth(id, type, res) {
             const reason = lastDisconnect.error?.output?.statusCode;
             
             if (reason === DisconnectReason.loggedOut) {
-                console.log(`Logged out for ${id}.`);
                 fs.rmSync(sessionDir, { recursive: true, force: true });
                 delete activeSessions[id];
             } else {
-                console.log(`Connection dropped for ${id} (Reason: ${reason}). Reconnecting...`);
-                // Auto-reconnect
-                startAuth(id, type, { json: () => {} }); // Dummy res
+                startAuth(id, type, { json: () => {} });
             }
         } else if (connection === 'open') {
             console.log(`Successfully paired with ${id}! Sending creds...`);
@@ -119,13 +111,18 @@ async function startAuth(id, type, res) {
                     caption: '🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊\n\n*✅ Pairing Successful!*\n\nHere is your `session` zip file.\n\n*How to use:*\n1. Download this zip file.\n2. Extract it.\n3. Put the contents into your bot\'s `session` folder.\n4. Restart the bot.\n\n⚠️ *DO NOT SHARE THIS FILE WITH ANYONE!*'
                 });
 
-                const credsFile = fs.readFileSync(path.join(sessionDir, 'creds.json'));
-                const base64Creds = Buffer.from(credsFile).toString('base64');
+                // Package all json files into the base64 string
+                const sessionFiles = fs.readdirSync(sessionDir);
+                const sessionObj = {};
+                for (const file of sessionFiles) {
+                    if (file.endsWith('.json')) {
+                        sessionObj[file] = fs.readFileSync(path.join(sessionDir, file), 'utf8');
+                    }
+                }
+                const base64Session = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
                 await conn.sendMessage(userJid, {
-                    text: `*Base64 Session ID:*\n\nXYMBOT~${base64Creds}`
+                    text: `*Base64 Session ID:*\n\nXYMBOT~${base64Session}`
                 });
-
-                console.log(`Sent session files to ${id}. Cleaning up...`);
                 
                 fs.unlinkSync(zipPath);
                 fs.rmSync(sessionDir, { recursive: true, force: true });
@@ -139,29 +136,19 @@ async function startAuth(id, type, res) {
     });
 }
 
-// Endpoint for 8-digit Pairing Code
 app.get('/pair', async (req, res) => {
     let phone = req.query.phone;
     if (!phone) return res.json({ error: "Please provide a phone number." });
     phone = phone.replace(/[^0-9]/g, '');
-
     req.setTimeout(15000, () => res.json({ error: "WhatsApp servers took too long to respond. Try again." }));
-
-    try { await startAuth(phone, 'code', res); } 
-    catch (e) { res.json({ error: "Internal server error" }); }
+    try { await startAuth(phone, 'code', res); } catch (e) { res.json({ error: "Internal server error" }); }
 });
 
-// Endpoint for QR Code
 app.get('/qr', async (req, res) => {
-    let id = "QR-" + Date.now(); // Generate random session ID
-
+    let id = "QR-" + Date.now();
     req.setTimeout(15000, () => res.json({ error: "WhatsApp servers took too long to respond. Try again." }));
-
-    try { await startAuth(id, 'qr', res); } 
-    catch (e) { res.json({ error: "Internal server error" }); }
+    try { await startAuth(id, 'qr', res); } catch (e) { res.json({ error: "Internal server error" }); }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Xymbot Pairing Server is running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Xymbot Pairing Server running on port ${PORT}`));

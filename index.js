@@ -1,10 +1,13 @@
-const express = require('express');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, delay, Browsers } = require('@whiskeysockets/baileys');
-const pino = require('pino');
-const fs = require('fs');
-const path = require('path');
-const cors = require('cors');
-const qrcode = require('qrcode');
+import express from 'express';
+import { default as makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, delay, Browsers } from '@whiskeysockets/baileys';
+import pino from 'pino';
+import fs from 'fs';
+import path, { dirname } from 'path';
+import cors from 'cors';
+import qrcode from 'qrcode';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 app.use(cors());

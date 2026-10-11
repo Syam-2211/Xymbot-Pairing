@@ -10,22 +10,21 @@ const DB_PATH = path.join(__dirname, 'licenses.json');
 
 // ─── LICENSE DATABASE ────────────────────────────────────────────────────────
 
-const DEFAULT_KEYS = [
-    { key: 'XYM-BOT-PAIR', owner: 'Master Key', status: 'active', expiresAt: null, createdAt: Date.now(), telegramUserId: null },
-    { key: 'CLIENT001',     owner: 'Default Client', status: 'active', expiresAt: null, createdAt: Date.now(), telegramUserId: null },
-    { key: 'XYMBOT-FREE',  owner: 'Community Free', status: 'active', expiresAt: null, createdAt: Date.now(), telegramUserId: null },
-];
+// Default keys are disabled — only official generated keys are accepted
+const BLOCKED_DEFAULT_KEYS = ['XYM-BOT-PAIR', 'CLIENT001', 'XYMBOT-FREE'];
 
 function loadLicenses() {
     try {
         if (!fs.existsSync(DB_PATH)) {
-            fs.writeFileSync(DB_PATH, JSON.stringify(DEFAULT_KEYS, null, 2), 'utf8');
-            return [...DEFAULT_KEYS];
+            fs.writeFileSync(DB_PATH, JSON.stringify([], null, 2), 'utf8');
+            return [];
         }
         const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-        return Array.isArray(data) ? data : [...DEFAULT_KEYS];
+        if (!Array.isArray(data)) return [];
+        // Ensure no blocked default keys can ever be loaded or used
+        return data.filter(l => !BLOCKED_DEFAULT_KEYS.includes((l.key || '').toUpperCase()));
     } catch (e) {
-        return [...DEFAULT_KEYS];
+        return [];
     }
 }
 
@@ -39,20 +38,34 @@ function generateKey() {
 }
 
 export function verifyLicense(key) {
-    if (!key) return { valid: false, error: 'License Key missing' };
+    if (!key || typeof key !== 'string' || !key.trim()) {
+        return { valid: false, error: 'License Key missing. A generated license key is required.' };
+    }
 
-    // Check environment VALID_KEYS override
-    const envKeys = (process.env.VALID_KEYS || '').split(',').map(k => k.trim()).filter(Boolean);
-    if (envKeys.includes(key)) return { valid: true, message: 'License verified via env config.' };
+    const cleanKey = key.trim().toUpperCase();
+
+    // Default keys are strictly disabled
+    if (BLOCKED_DEFAULT_KEYS.includes(cleanKey)) {
+        return { valid: false, error: 'Default keys are disabled. Only generated keys from the Telegram bot are accepted.' };
+    }
+
+    // Optional environment VALID_KEYS whitelist override
+    const envKeys = (process.env.VALID_KEYS || '').split(',').map(k => k.trim().toUpperCase()).filter(Boolean);
+    if (envKeys.includes(cleanKey)) {
+        return { valid: true, message: 'License verified successfully.', owner: 'Admin Whitelist', lifetime: true };
+    }
 
     const licenses = loadLicenses();
-    const lic = licenses.find(l => l.key.toUpperCase() === key.toUpperCase().trim());
-    if (!lic) return { valid: false, error: 'Invalid License Key' };
-    if (lic.status === 'revoked') return { valid: false, error: 'License revoked by admin.' };
-    if (lic.expiresAt && lic.expiresAt < Date.now()) {
-        return { valid: false, error: `License expired on ${new Date(lic.expiresAt).toLocaleDateString()}.` };
+    const lic = licenses.find(l => (l.key || '').toUpperCase() === cleanKey);
+    if (!lic) {
+        return { valid: false, error: 'Invalid License Key. Only official generated keys can be used to run the bot.' };
     }
-    return { valid: true, message: 'License verified successfully.', owner: lic.owner, expiresAt: lic.expiresAt };
+    if (lic.status === 'revoked') {
+        return { valid: false, error: 'License revoked by admin.' };
+    }
+
+    // Lifetime validity — no expiration validation
+    return { valid: true, message: 'License verified successfully.', owner: lic.owner, lifetime: true };
 }
 
 // ─── TELEGRAM API HELPERS ────────────────────────────────────────────────────
@@ -112,6 +125,8 @@ function adminKeyboard() {
             [{ text: '🚫 Revoke a Key', callback_data: 'admin_revoke' }],
             [{ text: '📋 List All Keys', callback_data: 'admin_list' }],
             [{ text: '🔍 Check Any Key', callback_data: 'admin_check' }],
+            [{ text: '🗑️ Delete All Active Keys', callback_data: 'admin_delete_active' }],
+            [{ text: '💣 Delete ALL Keys', callback_data: 'admin_deleteall' }],
         ]
     };
 }
@@ -158,8 +173,7 @@ export function initTelegramBot(app) {
                 const licenses = loadLicenses();
                 const existing = licenses.find(l =>
                     String(l.telegramUserId) === String(fromId) &&
-                    l.status === 'active' &&
-                    (!l.expiresAt || l.expiresAt > Date.now())
+                    l.status === 'active'
                 );
 
                 if (existing) {
@@ -246,24 +260,14 @@ export function initTelegramBot(app) {
                     return;
                 }
 
-                const isExpired  = myLicense.expiresAt && myLicense.expiresAt < Date.now();
                 const isRevoked  = myLicense.status === 'revoked';
-                const statusEmoji = isRevoked ? '🚫 Revoked' : isExpired ? '⌛ Expired' : '✅ Active';
-
-                const expiryText = myLicense.expiresAt
-                    ? `${new Date(myLicense.expiresAt).toLocaleDateString()}`
-                    : '♾️ Lifetime';
-
-                const daysLeft = myLicense.expiresAt
-                    ? Math.max(0, Math.ceil((myLicense.expiresAt - Date.now()) / (1000 * 60 * 60 * 24)))
-                    : '∞';
+                const statusEmoji = isRevoked ? '🚫 Revoked' : '✅ Active';
 
                 await editMsg(token, chatId, msgId,
                     `🔍 <b>Your License Status</b>\n\n` +
                     `🔑 <b>Key:</b> <code>${myLicense.key}</code>\n` +
                     `📊 <b>Status:</b> ${statusEmoji}\n` +
-                    `📅 <b>Expires:</b> ${expiryText}\n` +
-                    `⏳ <b>Days Left:</b> ${daysLeft}\n` +
+                    `♾️ <b>Validity:</b> Lifetime (Never Expires)\n` +
                     `👤 <b>Owner:</b> ${myLicense.owner}`,
                     {
                         reply_markup: {
@@ -337,13 +341,11 @@ export function initTelegramBot(app) {
             if (data === 'admin_genkey' && isAdmin(fromId)) {
                 userStates[fromId] = { action: 'genkey_waiting_input' };
                 await editMsg(token, chatId, msgId,
-                    `🔑 <b>Generate New License Key</b>\n\n` +
-                    `Please reply with the format:\n` +
-                    `<code>duration | note</code>\n\n` +
-                    `<b>Examples:</b>\n` +
-                    `<code>30d | @username</code>\n` +
-                    `<code>lifetime | VIP Client</code>\n` +
-                    `<code>7d | Trial User</code>`,
+                    `🔑 <b>Generate Lifetime License Key</b>\n\n` +
+                    `All keys are generated with <b>♾️ Lifetime</b> validity.\n` +
+                    `Please reply with a note/owner name for this key:\n\n` +
+                    `<b>Example:</b>\n` +
+                    `<code>VIP Client - John</code>`,
                     {
                         reply_markup: {
                             inline_keyboard: [[{ text: '❌ Cancel', callback_data: 'back_main' }]]
@@ -372,9 +374,8 @@ export function initTelegramBot(app) {
                 const all = loadLicenses();
                 let listText = `📋 <b>All Licenses (${all.length})</b>\n\n`;
                 for (const l of all.slice(-20)) { // Show last 20
-                    const emoji = l.status === 'revoked' ? '🚫' : (l.expiresAt && l.expiresAt < Date.now() ? '⌛' : '✅');
-                    const exp = l.expiresAt ? new Date(l.expiresAt).toLocaleDateString() : 'Lifetime';
-                    listText += `${emoji} <code>${l.key}</code>\n   👤 ${l.owner} | 📅 ${exp}\n\n`;
+                    const emoji = l.status === 'revoked' ? '🚫' : '✅';
+                    listText += `${emoji} <code>${l.key}</code>\n   👤 ${l.owner} | ♾️ Lifetime\n\n`;
                 }
                 await editMsg(token, chatId, msgId, listText, {
                     reply_markup: { inline_keyboard: [[{ text: '⬅️ Back', callback_data: 'back_main' }]] }
@@ -390,6 +391,103 @@ export function initTelegramBot(app) {
                     {
                         reply_markup: {
                             inline_keyboard: [[{ text: '❌ Cancel', callback_data: 'back_main' }]]
+                        }
+                    }
+                );
+                return;
+            }
+
+            // ── ADMIN: Delete All Active Keys ─────────────────────────────
+            if (data === 'admin_delete_active' && isAdmin(fromId)) {
+                const all = loadLicenses();
+                const activeKeys = all.filter(l => l.status === 'active');
+
+                if (activeKeys.length === 0) {
+                    await editMsg(token, chatId, msgId,
+                        `ℹ️ <b>No Active Keys Found</b>\n\nThere are currently no active license keys in the database.`,
+                        {
+                            reply_markup: {
+                                inline_keyboard: [[{ text: '⬅️ Admin Panel', callback_data: 'back_main' }]]
+                            }
+                        }
+                    );
+                    return;
+                }
+
+                await editMsg(token, chatId, msgId,
+                    `🗑️ <b>Delete All Active License Keys?</b>\n\n` +
+                    `⚠️ This will <b>permanently delete</b> all <b>${activeKeys.length} active keys</b>!\n` +
+                    `Any bot instances currently running on these keys will be stopped.\n\n` +
+                    `<b>Are you sure you want to proceed?</b>`,
+                    {
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: '✅ YES, Delete All Active Keys', callback_data: 'admin_delete_active_confirm' }],
+                                [{ text: '❌ No, Cancel', callback_data: 'back_main' }],
+                            ]
+                        }
+                    }
+                );
+                return;
+            }
+
+            // ── ADMIN: Confirm Delete All Active Keys ─────────────────────
+            if (data === 'admin_delete_active_confirm' && isAdmin(fromId)) {
+                const all = loadLicenses();
+                const activeCount = all.filter(l => l.status === 'active').length;
+                const remaining = all.filter(l => l.status !== 'active');
+                saveLicenses(remaining);
+
+                await editMsg(token, chatId, msgId,
+                    `🗑️ <b>Done! All ${activeCount} active license keys have been deleted.</b>\n\n` +
+                    `Active bots using these keys are now deauthorized.\n` +
+                    `New keys can be generated anytime.`,
+                    {
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: '🔑 Generate New Key', callback_data: 'admin_genkey' }],
+                                [{ text: '⬅️ Admin Panel', callback_data: 'back_main' }],
+                            ]
+                        }
+                    }
+                );
+                return;
+            }
+
+            // ── ADMIN: Delete ALL Keys ────────────────────────────────────
+            if (data === 'admin_deleteall' && isAdmin(fromId)) {
+                const count = loadLicenses().length;
+                await editMsg(token, chatId, msgId,
+                    `🗑️ <b>Delete ALL License Keys?</b>\n\n` +
+                    `⚠️ This will <b>permanently delete</b> all <b>${count} generated keys</b>!\n\n` +
+                    `<b>This action cannot be undone.</b>\n\n` +
+                    `Are you absolutely sure?`,
+                    {
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: '✅ YES, Delete Everything', callback_data: 'admin_deleteall_confirm' }],
+                                [{ text: '❌ No, Cancel', callback_data: 'back_main' }],
+                            ]
+                        }
+                    }
+                );
+                return;
+            }
+
+            // ── ADMIN: Confirm Delete ALL ────────────────────────────────
+            if (data === 'admin_deleteall_confirm' && isAdmin(fromId)) {
+                const before = loadLicenses().length;
+                fs.writeFileSync(DB_PATH, JSON.stringify([], null, 2), 'utf8');
+                await editMsg(token, chatId, msgId,
+                    `🗑️ <b>Done! All ${before} license keys have been deleted.</b>\n\n` +
+                    `The license database is now empty.\n` +
+                    `New keys can be generated anytime.`,
+                    {
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: '🔑 Generate New Key', callback_data: 'admin_genkey' }],
+                                [{ text: '⬅️ Admin Panel', callback_data: 'back_main' }],
+                            ]
                         }
                     }
                 );
@@ -414,20 +512,15 @@ export function initTelegramBot(app) {
             delete userStates[fromId];
 
             if (state.action === 'genkey_waiting_input') {
-                const [durPart, notePart] = text.split('|').map(s => s.trim());
-                const duration = durPart || '30d';
-                const note = notePart || 'Customer';
-
-                const expiresAt = parseDuration(duration);
+                const note = text.trim() || 'Customer';
                 const key = generateKey();
-                const lic = { key, owner: note, status: 'active', createdAt: Date.now(), expiresAt, telegramUserId: null };
+                const lic = { key, owner: note, status: 'active', createdAt: Date.now(), expiresAt: null, telegramUserId: null };
                 const licenses = loadLicenses();
                 licenses.push(lic);
                 saveLicenses(licenses);
 
-                const expStr = expiresAt ? new Date(expiresAt).toLocaleDateString() : '♾️ Lifetime';
                 await sendMsg(token, chatId,
-                    `✅ <b>License Generated!</b>\n\n🔑 <code>${key}</code>\n\n👤 For: ${note}\n📅 Expires: ${expStr}`,
+                    `✅ <b>Lifetime License Generated!</b>\n\n🔑 <code>${key}</code>\n\n👤 For: ${note}\n♾️ Validity: <b>Lifetime (Never Expires)</b>`,
                     {
                         reply_markup: {
                             inline_keyboard: [
@@ -457,7 +550,7 @@ export function initTelegramBot(app) {
             if (state.action === 'check_waiting_input') {
                 const result = verifyLicense(text.trim());
                 const statusLine = result.valid
-                    ? `✅ <b>VALID</b>\n👤 Owner: ${result.owner || 'N/A'}`
+                    ? `✅ <b>VALID (Lifetime)</b>\n👤 Owner: ${result.owner || 'N/A'}`
                     : `❌ <b>INVALID:</b> ${result.error}`;
                 await sendMsg(token, chatId,
                     `🔍 <b>Key Check:</b> <code>${text.trim()}</code>\n\n${statusLine}`

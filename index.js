@@ -15,6 +15,7 @@ import path, { dirname } from 'path';
 import cors from 'cors';
 import qrcode from 'qrcode';
 import { fileURLToPath } from 'url';
+import { verifyLicense as checkLicense, initTelegramBot } from './licenseManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -400,19 +401,8 @@ app.get('/status', (req, res) => {
 // Endpoint to verify License Key
 app.get('/api/verify-license', (req, res) => {
     const key = req.query.key;
-    if (!key) {
-        return res.json({ valid: false, error: 'License Key missing' });
-    }
-
-    // Default recognized keys + environment configured keys
-    const validKeysStr = process.env.VALID_KEYS || 'CLIENT001,XYM-BOT-PAIR,XYMBOT-FREE,DEFAULT';
-    const validKeys = validKeysStr.split(',').map(k => k.trim()).filter(k => k);
-
-    if (validKeys.includes(key)) {
-        return res.json({ valid: true, message: 'License verified successfully.' });
-    } else {
-        return res.json({ valid: false, error: 'Invalid License Key' });
-    }
+    const result = checkLicense(key);
+    res.json(result);
 });
 
 // Health check endpoint for uptime monitors
@@ -423,4 +413,6 @@ app.get('/health', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Xymbot Pairing Server is running on port ${PORT}`);
+    // Start embedded Telegram License Bot
+    initTelegramBot(app);
 });

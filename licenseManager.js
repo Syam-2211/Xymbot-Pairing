@@ -163,13 +163,10 @@ export function initTelegramBot(app) {
                 );
 
                 if (existing) {
-                    const exp = existing.expiresAt
-                        ? `📅 Expires: ${new Date(existing.expiresAt).toLocaleDateString()}`
-                        : `♾️ Lifetime license`;
                     await editMsg(token, chatId, msgId,
                         `✅ <b>You already have an active license!</b>\n\n` +
                         `🔑 <b>Your Key:</b>\n<code>${existing.key}</code>\n\n` +
-                        `${exp}\n\n` +
+                        `♾️ Valid: Lifetime — Never Expires\n\n` +
                         `<i>Tap the key above to copy it.</i>`,
                         {
                             reply_markup: {
@@ -180,25 +177,25 @@ export function initTelegramBot(app) {
                         }
                     );
                 } else {
-                    // Generate a new 30-day key automatically for the user
+                    // Generate a lifetime key for the user
                     const newKey = generateKey();
                     const newLic = {
                         key: newKey,
                         owner: fromName,
                         status: 'active',
-                        expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days default
+                        expiresAt: null, // Lifetime — never expires
                         createdAt: Date.now(),
                         telegramUserId: String(fromId),
                     };
                     licenses.push(newLic);
                     saveLicenses(licenses);
 
-                    const expiryDate = new Date(newLic.expiresAt).toLocaleDateString();
+                    const expiryDate = '♾️ Lifetime';
 
                     await editMsg(token, chatId, msgId,
                         `🎉 <b>Your License Key is Ready!</b>\n\n` +
                         `🔑 <b>Key (tap to copy):</b>\n<code>${newKey}</code>\n\n` +
-                        `📅 <b>Valid Until:</b> ${expiryDate}\n` +
+                        `♾️ <b>Valid:</b> Lifetime — Never Expires\n` +
                         `👤 <b>Issued To:</b> ${fromName}\n\n` +
                         `━━━━━━━━━━━━━━━━\n` +
                         `<b>📥 How to use:</b>\n` +
@@ -222,7 +219,7 @@ export function initTelegramBot(app) {
                             `🔔 <b>New License Issued!</b>\n\n` +
                             `👤 To: ${fromName} (ID: ${fromId})\n` +
                             `🔑 Key: <code>${newKey}</code>\n` +
-                            `📅 Expires: ${expiryDate}`
+                            `♾️ Valid: Lifetime`
                         );
                     }
                 }

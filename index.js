@@ -152,7 +152,6 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
     conn.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
-        // Handle QR Generation mode
         if (type === 'qr' && qr) {
             try {
                 const qrImage = await qrcode.toDataURL(qr);
@@ -175,10 +174,8 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
             }
         }
 
-        // Handle Pairing Code trigger safely once connection initializes or updates
         if (type === 'code' && !isReconnect && !initialResponded) {
             if (!conn.authState.creds.registered) {
-                // Give the socket a short moment to establish socket communication before requesting code
                 setTimeout(async () => {
                     try {
                         if (initialResponded) return;
@@ -223,7 +220,7 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
 
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
-            console.log(`Connection closed for ${id} (statusCode: ${statusCode})`);
+            console.log(`Connection closed for ${id} (statusCode:${statusCode})`);
 
             if (statusCode === DisconnectReason.loggedOut) {
                 if (sessionStates[id]) {
@@ -257,7 +254,7 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
             console.log(`Successfully paired with ${id}! Packaging credentials...`);
             if (sessionStates[id]) {
                 sessionStates[id].status = 'linking';
-                sessionStates[id].message = 'Pairing verified! Saving custom session...';
+                sessionStates[id].message = 'Pairing verified! Saving session...';
                 sessionStates[id].lastUpdated = Date.now();
             }
 
@@ -272,7 +269,8 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
                     const finalPhrase = customPhrase || 'default-session';
                     saveSessionPhrase(finalPhrase, base64Session);
 
-                    const sessionId = `XYMBOT_PHRASE~${finalPhrase}`;
+                    // Output ONLY the pure session data (base64 string) with nothing else attached
+                    const sessionId = base64Session;
 
                     if (sessionStates[id]) {
                         sessionStates[id].status = 'connected';
@@ -285,7 +283,7 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
                         const rawId = conn.user?.id || '';
                         const normalizedJid = jidNormalizedUser(rawId) || (rawId.split(':')[0] + '@s.whatsapp.net');
                         
-                        const messageText = `🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊\n\n*✅ Pairing Successful!*\n\nYour Custom Session ID:\n\n\`\`\`${sessionId}\`\`\`\n\n*How to use:*\nSet \`SESSION_ID=${sessionId}\` in your bot environment variables.`;
+                        const messageText = `🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊\n\n*✅ Pairing Successful!*\n\nYour Session Token:\n\n\`\`\`${sessionId}\`\`\``;
 
                         await conn.sendMessage(normalizedJid, { text: messageText });
                     } catch (waErr) {}

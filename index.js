@@ -20,7 +20,6 @@ import { verifyLicense as checkLicense, initTelegramBot } from './licenseManager
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load .env variables without external dependency
 const envPath = path.join(__dirname, '.env');
 if (fs.existsSync(envPath)) {
     try {
@@ -48,7 +47,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ─── SHORT SENTENCE PHRASE DATABASE HELPERS ─────────────────────────────────
+// ─── CUSTOM SESSION PHRASE DATABASE HELPERS ─────────────────────────────────
 const SESSIONS_DB_PATH = path.join(__dirname, 'session_phrases.json');
 
 function loadSessionPhrases() {
@@ -69,19 +68,9 @@ function saveSessionPhrase(phrase, base64Data) {
     fs.writeFileSync(SESSIONS_DB_PATH, JSON.stringify(db, null, 2), 'utf8');
 }
 
-function generateRandomPhrase() {
-    const adjs = ['swift', 'cosmic', 'silent', 'bold', 'golden', 'cyber', 'epic', 'mystic'];
-    const nouns = ['syam', 'bot', 'falcon', 'tiger', 'wizard', 'phoenix', 'storm', 'ninja'];
-    const actions = ['runs', 'flies', 'codes', 'builds', 'scales', 'ships', 'zips', 'glows'];
-    const rand = arr => arr[Math.floor(Math.random() * arr.length)];
-    return `${rand(adjs)} ${rand(nouns)} ${rand(actions)} fast`;
-}
-
-// Active socket connections and state store for real-time frontend updates
 const activeSessions = {};
 const sessionStates = {};
 
-// Clean up stale session entries older than 15 minutes
 setInterval(() => {
     const now = Date.now();
     for (const [id, state] of Object.entries(sessionStates)) {
@@ -95,11 +84,10 @@ setInterval(() => {
     }
 }, 5 * 60 * 1000);
 
-async function startAuth(id, type, onReady = null, isReconnect = false) {
+async function startAuth(id, type, onReady = null, isReconnect = false, customPhrase = '') {
     const sessionDir = path.join(__dirname, `session-${id}`);
 
     if (!isReconnect) {
-        // Fresh start: reset state and remove any old session folder
         sessionStates[id] = {
             id,
             type,
@@ -159,7 +147,6 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
     activeSessions[id] = conn;
     let initialResponded = false;
 
-    // Handle Pairing Code mode
     if (type === 'code' && !isReconnect) {
         if (!conn.authState.creds.registered) {
             setTimeout(async () => {
@@ -210,7 +197,6 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
     conn.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
-        // Whenever a new/refreshed QR code is emitted
         if (type === 'qr' && qr) {
             try {
                 const qrImage = await qrcode.toDataURL(qr);
@@ -243,10 +229,9 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
 
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
-            console.log(`Connection closed for ${id} (statusCode: ${statusCode}, reason: ${lastDisconnect?.error?.message || 'unknown'})`);
+            console.log(`Connection closed for ${id} (statusCode: ${statusCode})`);
 
             if (statusCode === DisconnectReason.loggedOut) {
-                console.log(`Device logged out or unlinked for ${id}.`);
                 if (sessionStates[id]) {
                     sessionStates[id].status = 'error';
                     sessionStates[id].error = 'Logged out or rejected by WhatsApp device. Please try again.';
@@ -262,7 +247,6 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
                     onReady({ error: 'Logged out. Please try again.' });
                 }
             } else {
-                console.log(`Handshake reconnection for ${id} (statusCode: ${statusCode}). Re-establishing connection...`);
                 if (sessionStates[id]) {
                     sessionStates[id].status = 'linking';
                     sessionStates[id].message = 'Device detected! Finalizing encryption & session...';
@@ -272,14 +256,14 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
                 try { conn.end(); } catch (e) {}
 
                 setTimeout(() => {
-                    startAuth(id, type, null, true);
+                    startAuth(id, type, null, true, customPhrase);
                 }, 1500);
             }
         } else if (connection === 'open') {
             console.log(`Successfully paired with ${id}! Packaging credentials...`);
             if (sessionStates[id]) {
                 sessionStates[id].status = 'linking';
-                sessionStates[id].message = 'Pairing verified! Generating Short Sentence Session ID...';
+                sessionStates[id].message = 'Pairing verified! Saving custom session...';
                 sessionStates[id].lastUpdated = Date.now();
             }
 
@@ -291,13 +275,12 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
                     const credsData = fs.readFileSync(credsPath, 'utf8');
                     const base64Session = Buffer.from(credsData).toString('base64');
                     
-                    // Generate a 4-word memorable sentence phrase
-                    const customPhrase = generateRandomPhrase();
-                    saveSessionPhrase(customPhrase, base64Session);
+                    // Save using the user's custom-typed name
+                    const finalPhrase = customPhrase || 'default-session';
+                    saveSessionPhrase(finalPhrase, base64Session);
 
-                    const sessionId = `XYMBOT_PHRASE~${customPhrase}`;
+                    const sessionId = `XYMBOT_PHRASE~${finalPhrase}`;
 
-                    // Update session state for frontend polling
                     if (sessionStates[id]) {
                         sessionStates[id].status = 'connected';
                         sessionStates[id].sessionId = sessionId;
@@ -305,18 +288,14 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
                         sessionStates[id].lastUpdated = Date.now();
                     }
 
-                    // Attempt to send session ID to user's WhatsApp self-chat as convenience
                     try {
                         const rawId = conn.user?.id || '';
                         const normalizedJid = jidNormalizedUser(rawId) || (rawId.split(':')[0] + '@s.whatsapp.net');
                         
-                        const messageText = `🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊\n\n*✅ Pairing Successful!*\n\nHere is your *SESSION ID* (tap and hold to copy):\n\n\`\`\`${sessionId}\`\`\`\n\n*How to use:*\n1. Copy the code above.\n2. In your bot's environment variables, set:\n\`\`\`SESSION_ID=${sessionId}\`\`\`\n3. Start the bot.\n\n⚠️ *DO NOT SHARE THIS SESSION ID WITH ANYONE!*`;
+                        const messageText = `🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊\n\n*✅ Pairing Successful!*\n\nYour Custom Session ID:\n\n\`\`\`${sessionId}\`\`\`\n\n*How to use:*\nSet \`SESSION_ID=${sessionId}\` in your bot environment variables.`;
 
                         await conn.sendMessage(normalizedJid, { text: messageText });
-                        console.log(`Dispatched Session ID to WhatsApp user ${normalizedJid}`);
-                    } catch (waErr) {
-                        console.warn('Could not dispatch message over WhatsApp (Session ID is available on web UI):', waErr.message);
-                    }
+                    } catch (waErr) {}
 
                     setTimeout(() => {
                         try {
@@ -328,14 +307,12 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
                         } catch (e) {}
                     }, 8000);
                 } else {
-                    console.error('creds.json not found in', sessionDir);
                     if (sessionStates[id]) {
                         sessionStates[id].status = 'error';
                         sessionStates[id].error = 'Credentials file was not created. Please try again.';
                     }
                 }
             } catch (err) {
-                console.error('Session processing error:', err);
                 if (sessionStates[id]) {
                     sessionStates[id].status = 'error';
                     sessionStates[id].error = 'Failed to process session: ' + err.message;
@@ -345,7 +322,6 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
     });
 }
 
-// Endpoint for your bot to fetch session data using the short sentence phrase
 app.get('/api/get-session', (req, res) => {
     const phrase = req.query.phrase;
     if (!phrase) return res.status(400).json({ error: 'Phrase parameter missing' });
@@ -360,10 +336,13 @@ app.get('/api/get-session', (req, res) => {
     res.json({ success: true, sessionData });
 });
 
-// Endpoint for 8-digit Pairing Code
 app.get('/pair', async (req, res) => {
     let phone = req.query.phone;
+    let customPhrase = req.query.custom;
+
     if (!phone) return res.json({ error: 'Please provide a phone number.' });
+    if (!customPhrase) return res.json({ error: 'Please provide a custom session name.' });
+    
     phone = phone.replace(/[^0-9]/g, '');
 
     if (phone.length < 8) {
@@ -385,7 +364,7 @@ app.get('/pair', async (req, res) => {
                 clearTimeout(timeout);
                 res.json(data);
             }
-        });
+        }, false, customPhrase);
     } catch (e) {
         if (!responded) {
             responded = true;
@@ -395,8 +374,10 @@ app.get('/pair', async (req, res) => {
     }
 });
 
-// Endpoint for QR Code
 app.get('/qr', async (req, res) => {
+    let customPhrase = req.query.custom;
+    if (!customPhrase) return res.json({ error: 'Please provide a custom session name.' });
+
     const id = 'QR-' + Date.now();
 
     let responded = false;
@@ -414,7 +395,7 @@ app.get('/qr', async (req, res) => {
                 clearTimeout(timeout);
                 res.json(data);
             }
-        });
+        }, false, customPhrase);
     } catch (e) {
         if (!responded) {
             responded = true;
@@ -424,7 +405,6 @@ app.get('/qr', async (req, res) => {
     }
 });
 
-// Polling endpoint for real-time status & session delivery
 app.get('/status', (req, res) => {
     const id = req.query.id;
     if (!id || !sessionStates[id]) {
@@ -444,14 +424,12 @@ app.get('/status', (req, res) => {
     });
 });
 
-// Endpoint to verify License Key
 app.get('/api/verify-license', (req, res) => {
     const key = req.query.key;
     const result = checkLicense(key);
     res.json(result);
 });
 
-// Health check endpoint for uptime monitors
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime() });
 });
@@ -461,4 +439,3 @@ app.listen(PORT, () => {
     console.log(`Xymbot Pairing Server is running on port ${PORT}`);
     initTelegramBot(app);
 });
-                        

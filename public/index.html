@@ -67,64 +67,6 @@
             z-index: -1;
         }
 
-        /* --- MUSIC PLAYER WIDGET --- */
-        .music-widget {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(16, 22, 40, 0.8);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: 10px 16px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(0, 229, 255, 0.15);
-            z-index: 100;
-        }
-
-        .song-select {
-            background: rgba(7, 9, 19, 0.9);
-            border: 1px solid var(--glass-border);
-            color: var(--text-main);
-            font-size: 11px;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            padding: 4px 8px;
-            border-radius: 8px;
-            outline: none;
-            cursor: pointer;
-        }
-
-        .player-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
-        .play-pause-btn {
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
-            border: none;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            color: #070913;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 800;
-            box-shadow: 0 0 12px rgba(0, 229, 255, 0.5);
-            transition: transform 0.2s;
-        }
-
-        .play-pause-btn:hover {
-            transform: scale(1.1);
-        }
-
         /* --- GLASSMORPHISM CONTAINER --- */
         .container {
             width: 100%;
@@ -470,28 +412,6 @@
     </div>
     <div class="bg-overlay"></div>
 
-    <!-- --- MULTI-TRACK MUSIC PLAYER WIDGET --- -->
-    <div class="music-widget" id="music-widget">
-        <div class="music-controls-group">
-            <select class="song-select" id="song-selector" onchange="changeSong()">
-                <option value="https://cdns-preview-d.dzcdn.net/stream/c-deda7b1b1178c772e0a2944b025f7a08-3.mp3">Starboy - The Weeknd</option>
-                <option value="https://cdns-preview-f.dzcdn.net/stream/c-f458cb51922c07ef2060b85293bb8d2e-3.mp3">Shape of You - Ed Sheeran</option>
-                <option value="https://cdns-preview-c.dzcdn.net/stream/c-c828e8cc14e912444c8cb4e65d83637e-3.mp3">Ransom - Lil Tecca</option>
-                <option value="https://cdns-preview-a.dzcdn.net/stream/c-a28a3f890cf20845a7b6a22f3e8b0d46-3.mp3">Technologia - Electronic</option>
-                <option value="https://cdns-preview-e.dzcdn.net/stream/c-e943265882e34771239c87d3a824e001-3.mp3">I Want to Fly - Uplifting</option>
-            </select>
-            <div class="player-row">
-                <span style="font-size: 10px; color: var(--text-muted);" id="audio-status">Audio Ready</span>
-                <button class="play-pause-btn" id="play-music-btn" onclick="toggleMusic()">▶</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Audio stream element -->
-    <audio id="bg-audio" loop>
-        <source src="https://cdns-preview-d.dzcdn.net/stream/c-deda7b1b1178c772e0a2944b025f7a08-3.mp3" type="video/mp4">
-    </audio>
-
     <div class="container" id="main-card">
         <div class="header">
             <div class="badge-logo">🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊 & Xymbot</div>
@@ -605,54 +525,7 @@
                 duration: 1000,
                 easing: 'easeOutExpo'
             });
-
-            anime({
-                targets: '#music-widget',
-                opacity: [0, 1],
-                translateX: [30, 0],
-                duration: 1000,
-                delay: 300,
-                easing: 'easeOutExpo'
-            });
         });
-
-        // --- MUSIC PLAYER SCRIPT ---
-        const audio = document.getElementById('bg-audio');
-        const musicBtn = document.getElementById('play-music-btn');
-        const songSelector = document.getElementById('song-selector');
-        const audioStatus = document.getElementById('audio-status');
-        let isPlaying = false;
-
-        function toggleMusic() {
-            if (isPlaying) {
-                audio.pause();
-                musicBtn.innerText = '▶';
-                audioStatus.innerText = 'Paused';
-                anime({ targets: musicBtn, scale: [1.2, 1], duration: 300 });
-            } else {
-                audio.play().then(() => {
-                    isPlaying = true;
-                    musicBtn.innerText = '❚❚';
-                    audioStatus.innerText = 'Playing...';
-                    anime({ targets: musicBtn, scale: [1.2, 1], duration: 300 });
-                }).catch(e => {
-                    audioStatus.innerText = 'Click Play Again';
-                });
-            }
-            isPlaying = !isPlaying;
-        }
-
-        function changeSong() {
-            const selectedUrl = songSelector.value;
-            audio.src = selectedUrl;
-            if (isPlaying) {
-                audio.play().then(() => {
-                    audioStatus.innerText = 'Playing...';
-                }).catch(e => {
-                    audioStatus.innerText = 'Playback Error';
-                });
-            }
-        }
 
         // --- PAIRING LOGIC & ANIME.JS TRANSITIONS ---
         let currentMode = 'code';
@@ -701,10 +574,6 @@
 
             if (!phoneInput) {
                 alert('Please enter your phone number with country code!');
-                return;
-            }
-            if (!customSession) {
-                alert('Please provide a custom session name!');
                 return;
             }
 
@@ -759,11 +628,6 @@
         async function requestQR() {
             const customSession = document.getElementById('custom-session-input').value.trim();
             const btn = document.getElementById('btn-get-qr');
-
-            if (!customSession) {
-                alert('Please provide a custom session name!');
-                return;
-            }
 
             btn.disabled = true;
 

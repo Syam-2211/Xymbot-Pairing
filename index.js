@@ -147,56 +147,12 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
     activeSessions[id] = conn;
     let initialResponded = false;
 
-    if (type === 'code' && !isReconnect) {
-        if (!conn.authState.creds.registered) {
-            setTimeout(async () => {
-                try {
-                    let code = await conn.requestPairingCode(id);
-                    code = code?.match(/.{1,4}/g)?.join('-') || code;
-                    
-                    if (sessionStates[id]) {
-                        sessionStates[id].status = 'waiting';
-                        sessionStates[id].code = code;
-                        sessionStates[id].message = 'Pairing code generated. Enter this in WhatsApp.';
-                        sessionStates[id].lastUpdated = Date.now();
-                    }
-
-                    if (onReady && !initialResponded) {
-                        initialResponded = true;
-                        onReady({ code, id });
-                    }
-                } catch (err) {
-                    console.error(`Pairing Code Error for ${id}:`, err.message);
-                    const errMsg = 'Failed to fetch code from WhatsApp servers. Please try again.';
-                    if (sessionStates[id]) {
-                        sessionStates[id].status = 'error';
-                        sessionStates[id].error = errMsg;
-                        sessionStates[id].lastUpdated = Date.now();
-                    }
-                    if (onReady && !initialResponded) {
-                        initialResponded = true;
-                        onReady({ error: errMsg });
-                    }
-                }
-            }, 3000);
-        } else {
-            const errMsg = 'Number is already registered. Please use another number or clear session.';
-            if (sessionStates[id]) {
-                sessionStates[id].status = 'error';
-                sessionStates[id].error = errMsg;
-            }
-            if (onReady && !initialResponded) {
-                initialResponded = true;
-                onReady({ error: errMsg });
-            }
-        }
-    }
-
     conn.ev.on('creds.update', saveCreds);
 
     conn.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
+        // Handle QR Generation mode
         if (type === 'qr' && qr) {
             try {
                 const qrImage = await qrcode.toDataURL(qr);
@@ -216,6 +172,44 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
                     initialResponded = true;
                     onReady({ error: 'Failed to generate QR Code image.' });
                 }
+            }
+        }
+
+        // Handle Pairing Code trigger safely once connection initializes or updates
+        if (type === 'code' && !isReconnect && !initialResponded) {
+            if (!conn.authState.creds.registered) {
+                // Give the socket a short moment to establish socket communication before requesting code
+                setTimeout(async () => {
+                    try {
+                        if (initialResponded) return;
+                        let code = await conn.requestPairingCode(id);
+                        code = code?.match(/.{1,4}/g)?.join('-') || code;
+                        
+                        if (sessionStates[id]) {
+                            sessionStates[id].status = 'waiting';
+                            sessionStates[id].code = code;
+                            sessionStates[id].message = 'Pairing code generated. Enter this in WhatsApp.';
+                            sessionStates[id].lastUpdated = Date.now();
+                        }
+
+                        if (onReady && !initialResponded) {
+                            initialResponded = true;
+                            onReady({ code, id });
+                        }
+                    } catch (err) {
+                        console.error(`Pairing Code Error for ${id}:`, err.message);
+                        const errMsg = 'Failed to fetch code from WhatsApp servers. Please try again.';
+                        if (sessionStates[id]) {
+                            sessionStates[id].status = 'error';
+                            sessionStates[id].error = errMsg;
+                            sessionStates[id].lastUpdated = Date.now();
+                        }
+                        if (onReady && !initialResponded) {
+                            initialResponded = true;
+                            onReady({ error: errMsg });
+                        }
+                    }
+                }, 4000);
             }
         }
 
@@ -275,7 +269,6 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
                     const credsData = fs.readFileSync(credsPath, 'utf8');
                     const base64Session = Buffer.from(credsData).toString('base64');
                     
-                    // Save using the user's custom-typed name
                     const finalPhrase = customPhrase || 'default-session';
                     saveSessionPhrase(finalPhrase, base64Session);
 
@@ -355,7 +348,7 @@ app.get('/pair', async (req, res) => {
             responded = true;
             res.json({ error: 'WhatsApp servers took too long to respond. Try again.' });
         }
-    }, 15000);
+    }, 20000);
 
     try {
         await startAuth(phone, 'code', (data) => {
@@ -386,7 +379,7 @@ app.get('/qr', async (req, res) => {
             responded = true;
             res.json({ error: 'WhatsApp servers took too long to respond. Try again.' });
         }
-    }, 15000);
+    }, 20000);
 
     try {
         await startAuth(id, 'qr', (data) => {

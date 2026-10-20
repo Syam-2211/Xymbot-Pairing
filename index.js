@@ -263,8 +263,22 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
             try {
                 const credsPath = path.join(sessionDir, 'creds.json');
                 if (fs.existsSync(credsPath)) {
-                    const credsData = fs.readFileSync(credsPath, 'utf8');
-                    const base64Session = Buffer.from(credsData).toString('base64');
+                    
+                    // Bundle ALL session files, not just creds.json
+                    const sessionFiles = fs.readdirSync(sessionDir);
+                    const sessionObj = {};
+                    for (const file of sessionFiles) {
+                        const filePath = path.join(sessionDir, file);
+                        if (fs.statSync(filePath).isFile()) {
+                            const content = fs.readFileSync(filePath, 'utf8');
+                            try {
+                                sessionObj[file] = JSON.parse(content);
+                            } catch (e) {
+                                sessionObj[file] = content;
+                            }
+                        }
+                    }
+                    const base64Session = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
                     
                     // Fallback to xym-sneha-bot if the custom phrase is missing or fails
                     const finalPhrase = customPhrase || 'xym-sneha-bot';

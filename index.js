@@ -48,6 +48,35 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// ─── SHORT SENTENCE PHRASE DATABASE HELPERS ─────────────────────────────────
+const SESSIONS_DB_PATH = path.join(__dirname, 'session_phrases.json');
+
+function loadSessionPhrases() {
+    try {
+        if (!fs.existsSync(SESSIONS_DB_PATH)) {
+            fs.writeFileSync(SESSIONS_DB_PATH, JSON.stringify({}, null, 2), 'utf8');
+            return {};
+        }
+        return JSON.parse(fs.readFileSync(SESSIONS_DB_PATH, 'utf8'));
+    } catch (e) {
+        return {};
+    }
+}
+
+function saveSessionPhrase(phrase, base64Data) {
+    const db = loadSessionPhrases();
+    db[phrase.toLowerCase().trim()] = base64Data;
+    fs.writeFileSync(SESSIONS_DB_PATH, JSON.stringify(db, null, 2), 'utf8');
+}
+
+function generateRandomPhrase() {
+    const adjs = ['swift', 'cosmic', 'silent', 'bold', 'golden', 'cyber', 'epic', 'mystic'];
+    const nouns = ['syam', 'bot', 'falcon', 'tiger', 'wizard', 'phoenix', 'storm', 'ninja'];
+    const actions = ['runs', 'flies', 'codes', 'builds', 'scales', 'ships', 'zips', 'glows'];
+    const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+    return `${rand(adjs)} ${rand(nouns)} ${rand(actions)} fast`;
+}
+
 // Active socket connections and state store for real-time frontend updates
 const activeSessions = {};
 const sessionStates = {};
@@ -233,8 +262,6 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
                     onReady({ error: 'Logged out. Please try again.' });
                 }
             } else {
-                // Handshake reconnect (428 connectionClosed, 515 restartRequired, 408 timeout, etc.)
-                // DO NOT DELETE sessionDir! Preserve credentials to finalize handshake.
                 console.log(`Handshake reconnection for ${id} (statusCode: ${statusCode}). Re-establishing connection...`);
                 if (sessionStates[id]) {
                     sessionStates[id].status = 'linking';
@@ -252,7 +279,7 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
             console.log(`Successfully paired with ${id}! Packaging credentials...`);
             if (sessionStates[id]) {
                 sessionStates[id].status = 'linking';
-                sessionStates[id].message = 'Pairing verified! Generating Base64 Session ID...';
+                sessionStates[id].message = 'Pairing verified! Generating Short Sentence Session ID...';
                 sessionStates[id].lastUpdated = Date.now();
             }
 
@@ -263,7 +290,12 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
                 if (fs.existsSync(credsPath)) {
                     const credsData = fs.readFileSync(credsPath, 'utf8');
                     const base64Session = Buffer.from(credsData).toString('base64');
-                    const sessionId = `XYMBOT~${base64Session}`;
+                    
+                    // Generate a 4-word memorable sentence phrase
+                    const customPhrase = generateRandomPhrase();
+                    saveSessionPhrase(customPhrase, base64Session);
+
+                    const sessionId = `XYMBOT_PHRASE~${customPhrase}`;
 
                     // Update session state for frontend polling
                     if (sessionStates[id]) {
@@ -278,7 +310,7 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
                         const rawId = conn.user?.id || '';
                         const normalizedJid = jidNormalizedUser(rawId) || (rawId.split(':')[0] + '@s.whatsapp.net');
                         
-                        const messageText = `🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊\n\n*✅ Pairing Successful!*\n\nHere is your *SESSION ID* (tap and hold to copy):\n\n\`\`\`${sessionId}\`\`\`\n\n*How to use:*\n1. Copy the code above.\n2. In your bot's \`config.js\`, set:\n\`\`\`global.SESSION_ID = "${sessionId}";\`\`\`\n(or set \`SESSION_ID\` in your environment variables / .env).\n3. Start the bot (\`npm start\` or \`node index.js\`).\n\n⚠️ *DO NOT SHARE THIS SESSION ID WITH ANYONE!*`;
+                        const messageText = `🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊\n\n*✅ Pairing Successful!*\n\nHere is your *SESSION ID* (tap and hold to copy):\n\n\`\`\`${sessionId}\`\`\`\n\n*How to use:*\n1. Copy the code above.\n2. In your bot's environment variables, set:\n\`\`\`SESSION_ID=${sessionId}\`\`\`\n3. Start the bot.\n\n⚠️ *DO NOT SHARE THIS SESSION ID WITH ANYONE!*`;
 
                         await conn.sendMessage(normalizedJid, { text: messageText });
                         console.log(`Dispatched Session ID to WhatsApp user ${normalizedJid}`);
@@ -286,7 +318,6 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
                         console.warn('Could not dispatch message over WhatsApp (Session ID is available on web UI):', waErr.message);
                     }
 
-                    // Delay session directory cleanup to ensure safe write & read
                     setTimeout(() => {
                         try {
                             if (fs.existsSync(sessionDir)) {
@@ -313,6 +344,21 @@ async function startAuth(id, type, onReady = null, isReconnect = false) {
         }
     });
 }
+
+// Endpoint for your bot to fetch session data using the short sentence phrase
+app.get('/api/get-session', (req, res) => {
+    const phrase = req.query.phrase;
+    if (!phrase) return res.status(400).json({ error: 'Phrase parameter missing' });
+    
+    const db = loadSessionPhrases();
+    const sessionData = db[phrase.toLowerCase().trim()];
+
+    if (!sessionData) {
+        return res.status(404).json({ error: 'Session phrase not found or expired' });
+    }
+
+    res.json({ success: true, sessionData });
+});
 
 // Endpoint for 8-digit Pairing Code
 app.get('/pair', async (req, res) => {
@@ -413,6 +459,6 @@ app.get('/health', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Xymbot Pairing Server is running on port ${PORT}`);
-    // Start embedded Telegram License Bot
     initTelegramBot(app);
 });
+                        

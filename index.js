@@ -266,10 +266,11 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
                     const credsData = fs.readFileSync(credsPath, 'utf8');
                     const base64Session = Buffer.from(credsData).toString('base64');
                     
-                    const finalPhrase = customPhrase || 'default-session';
+                    // Fallback to xym-sneha-bot if the custom phrase is missing or fails
+                    const finalPhrase = customPhrase || 'xym-sneha-bot';
                     saveSessionPhrase(finalPhrase, base64Session);
 
-                    // Output the CUSTOM PHRASE as the sessionId so the user copies their custom name
+                    // Output the final custom phrase to the UI and WhatsApp
                     const sessionId = finalPhrase;
 
                     if (sessionStates[id]) {
@@ -332,7 +333,11 @@ app.get('/pair', async (req, res) => {
     let customPhrase = req.query.custom;
 
     if (!phone) return res.json({ error: 'Please provide a phone number.' });
-    if (!customPhrase) return res.json({ error: 'Please provide a custom session name.' });
+    
+    // Default to xym-sneha-bot if nothing is typed
+    if (!customPhrase || customPhrase.trim() === '') {
+        customPhrase = 'xym-sneha-bot';
+    }
     
     phone = phone.replace(/[^0-9]/g, '');
 
@@ -367,7 +372,11 @@ app.get('/pair', async (req, res) => {
 
 app.get('/qr', async (req, res) => {
     let customPhrase = req.query.custom;
-    if (!customPhrase) return res.json({ error: 'Please provide a custom session name.' });
+    
+    // Default to xym-sneha-bot if nothing is typed
+    if (!customPhrase || customPhrase.trim() === '') {
+        customPhrase = 'xym-sneha-bot';
+    }
 
     const id = 'QR-' + Date.now();
 

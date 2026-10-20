@@ -3,20 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xymbot • Elite Luxury Neural Core</title>
+    <title>🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊 & Xymbot • Pairing Portal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-deep: #050508;
-            --glass-bg: rgba(18, 20, 30, 0.55);
-            --glass-border: rgba(212, 175, 55, 0.3);
-            --gold-primary: #d4af37;
-            --gold-light: #f3e5ab;
-            --accent-glow: rgba(212, 175, 55, 0.25);
-            --text-main: #f4f4f6;
-            --text-muted: #a1a1aa;
+            --glass-bg: rgba(20, 20, 35, 0.45);
+            --glass-border: rgba(255, 182, 193, 0.25);
+            --accent-pink: #ff69b4;
+            --accent-purple: #ba55d3;
+            --accent-glow: rgba(255, 105, 180, 0.2);
+            --text-main: #fff0f5;
+            --text-muted: #d8bfd8;
         }
 
         * {
@@ -27,7 +26,7 @@
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: var(--bg-deep);
+            background: #0b090c;
             color: var(--text-main);
             min-height: 100vh;
             display: flex;
@@ -38,7 +37,7 @@
             position: relative;
         }
 
-        /* --- IMMERSIVE BACKGROUND VIDEO --- */
+        /* --- BACKGROUND ANIMATED VIDEO --- */
         .bg-video-container {
             position: fixed;
             top: 0;
@@ -53,7 +52,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            filter: brightness(0.25) contrast(1.3) hue-rotate(15deg);
+            filter: brightness(0.45) contrast(1.15) saturate(1.2);
         }
 
         .bg-overlay {
@@ -62,68 +61,34 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: radial-gradient(circle at 50% 30%, rgba(20, 18, 10, 0.6) 0%, rgba(5, 5, 8, 0.92) 100%);
+            background: radial-gradient(circle at 50% 50%, rgba(15, 10, 20, 0.3) 0%, rgba(10, 7, 15, 0.75) 100%);
             z-index: -1;
         }
 
-        /* --- LUXURY VINYL / MULTI-SONG PLAYER WIDGET --- */
-        .vinyl-widget {
+        /* --- MUSIC PLAYER WIDGET --- */
+        .music-widget {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(12, 14, 20, 0.85);
+            background: rgba(30, 20, 40, 0.75);
             border: 1px solid var(--glass-border);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            padding: 12px 18px;
+            padding: 10px 16px;
             border-radius: 20px;
             display: flex;
             align-items: center;
-            gap: 14px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 25px rgba(212, 175, 55, 0.15);
+            gap: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(255, 105, 180, 0.15);
             z-index: 100;
         }
 
-        .vinyl-disc {
-            width: 38px;
-            height: 38px;
-            background: radial-gradient(circle, #000 30%, #222 31%, #222 45%, #111 46%);
-            border-radius: 50%;
-            border: 1px solid var(--gold-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: spinVinyl 4s linear infinite;
-            animation-play-state: paused;
-        }
-
-        .vinyl-disc.playing {
-            animation-play-state: running;
-        }
-
-        .vinyl-center {
-            width: 12px;
-            height: 12px;
-            background: var(--gold-primary);
-            border-radius: 50%;
-        }
-
-        @keyframes spinVinyl {
-            to { transform: rotate(360deg); }
-        }
-
-        .music-controls-group {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
         .song-select {
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(10, 5, 15, 0.8);
             border: 1px solid var(--glass-border);
-            color: var(--gold-light);
+            color: var(--text-main);
             font-size: 11px;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             padding: 4px 8px;
             border-radius: 8px;
             outline: none;
@@ -138,19 +103,19 @@
         }
 
         .play-pause-btn {
-            background: linear-gradient(135deg, var(--gold-primary), #aa820a);
+            background: linear-gradient(135deg, var(--accent-pink), var(--accent-purple));
             border: none;
             width: 28px;
             height: 28px;
             border-radius: 50%;
-            color: #000;
+            color: #fff;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 12px;
-            font-weight: 800;
-            box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+            font-weight: 700;
+            box-shadow: 0 0 10px rgba(255, 105, 180, 0.5);
             transition: transform 0.2s;
         }
 
@@ -158,19 +123,19 @@
             transform: scale(1.1);
         }
 
-        /* --- MAXIMALIST LUXURY GLASS CARD --- */
+        /* --- AESTHETIC GLASSMORPHISM CONTAINER --- */
         .container {
             width: 100%;
-            max-width: 520px;
+            max-width: 500px;
             background: var(--glass-bg);
             border: 1.5px solid var(--glass-border);
-            backdrop-filter: blur(35px);
-            -webkit-backdrop-filter: blur(35px);
-            border-radius: 32px;
-            padding: 40px 34px;
-            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.85), 
-                        0 0 60px var(--accent-glow),
-                        inset 0 0 30px rgba(212, 175, 55, 0.05);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-radius: 28px;
+            padding: 38px 30px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7), 
+                        0 0 40px var(--accent-glow),
+                        inset 0 0 25px rgba(255, 255, 255, 0.05);
             position: relative;
             overflow: hidden;
         }
@@ -179,148 +144,139 @@
             content: '';
             position: absolute;
             top: -100px;
-            right: -100px;
+            left: 50%;
+            transform: translateX(-50%);
             width: 250px;
             height: 250px;
-            background: radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 105, 180, 0.2) 0%, transparent 70%);
             pointer-events: none;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 28px;
+            margin-bottom: 26px;
         }
 
         .badge-logo {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 6px 16px;
+            padding: 6px 14px;
             border-radius: 99px;
-            background: rgba(212, 175, 55, 0.08);
-            border: 1px solid rgba(212, 175, 55, 0.35);
+            background: rgba(255, 105, 180, 0.12);
+            border: 1px solid rgba(255, 105, 180, 0.3);
             font-size: 11px;
-            font-weight: 800;
-            color: var(--gold-light);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 14px;
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
+            font-weight: 700;
+            color: var(--accent-pink);
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            box-shadow: 0 0 15px rgba(255, 105, 180, 0.2);
         }
 
         h1 {
-            font-family: 'Cinzel', serif;
-            font-size: 32px;
+            font-size: 26px;
             font-weight: 800;
-            letter-spacing: 1px;
-            background: linear-gradient(135deg, #ffffff 20%, var(--gold-light) 60%, var(--gold-primary) 100%);
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 30%, #ffb6c1 70%, var(--accent-pink) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 8px;
-            text-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
         }
 
         .subtitle {
             font-size: 13px;
             color: var(--text-muted);
-            letter-spacing: 0.3px;
+            line-height: 1.5;
         }
 
         .tabs {
             display: flex;
-            background: rgba(8, 10, 16, 0.85);
+            background: rgba(15, 10, 20, 0.75);
             border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 6px;
-            margin-bottom: 26px;
-            gap: 6px;
+            border-radius: 14px;
+            padding: 4px;
+            margin-bottom: 22px;
+            gap: 4px;
         }
 
         .tab-btn {
             flex: 1;
-            padding: 12px;
+            padding: 10px 14px;
             border: none;
             background: transparent;
             color: var(--text-muted);
-            font-size: 12px;
-            font-weight: 700;
-            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 10px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            letter-spacing: 0.5px;
         }
 
         .tab-btn.active {
-            background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(170, 130, 10, 0.2));
-            color: var(--gold-light);
-            border: 1px solid var(--gold-primary);
-            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.25);
+            background: linear-gradient(135deg, rgba(255, 105, 180, 0.25), rgba(186, 85, 211, 0.3));
+            color: #fff;
+            border: 1px solid rgba(255, 105, 180, 0.4);
+            box-shadow: 0 4px 15px rgba(255, 105, 180, 0.2);
         }
 
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             position: relative;
         }
 
         .input-group label {
             display: block;
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--gold-primary);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
             margin-bottom: 8px;
             text-align: left;
-            letter-spacing: 1px;
-            text-transform: uppercase;
         }
 
         input {
             width: 100%;
-            padding: 15px 18px;
-            background: rgba(8, 10, 16, 0.9);
-            border: 1.5px solid var(--glass-border);
-            border-radius: 14px;
+            padding: 14px 16px;
+            background: rgba(15, 10, 20, 0.85);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
             color: #fff;
             font-size: 15px;
-            font-weight: 600;
+            font-weight: 500;
             outline: none;
-            transition: all 0.3s;
+            transition: border-color 0.2s, box-shadow 0.2s;
             font-family: inherit;
         }
 
         input:focus {
-            border-color: var(--gold-primary);
-            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15), 0 0 25px rgba(212, 175, 55, 0.25);
+            border-color: var(--accent-pink);
+            box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.2);
         }
 
         .btn-primary {
             width: 100%;
-            padding: 16px 20px;
-            background: linear-gradient(135deg, var(--gold-light), var(--gold-primary), #8c6d10);
-            background-size: 200% auto;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, var(--accent-pink), var(--accent-purple));
             border: none;
-            border-radius: 14px;
-            color: #0b0c10;
-            font-size: 14px;
-            font-weight: 800;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            transition: 0.4s;
-            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.35);
-            letter-spacing: 1px;
-            text-transform: uppercase;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 8px 24px rgba(255, 105, 180, 0.3);
         }
 
         .btn-primary:hover:not(:disabled) {
-            background-position: right center;
-            transform: translateY(-3px);
-            box-shadow: 0 15px 35px rgba(212, 175, 55, 0.55);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 28px rgba(255, 105, 180, 0.45);
         }
 
         .btn-primary:disabled {
@@ -332,12 +288,12 @@
         .btn-secondary {
             width: 100%;
             padding: 12px 18px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--glass-border);
             border-radius: 12px;
             color: var(--text-main);
-            font-size: 13px;
-            font-weight: 700;
+            font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
             transition: background 0.2s;
             display: inline-flex;
@@ -347,7 +303,7 @@
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.15);
         }
 
         #display-section, #success-section {
@@ -360,21 +316,20 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
-            padding: 14px 18px;
-            border-radius: 14px;
-            background: rgba(8, 10, 16, 0.85);
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: rgba(15, 10, 20, 0.8);
             border: 1px solid var(--glass-border);
             font-size: 13px;
-            font-weight: 700;
+            font-weight: 600;
             margin-bottom: 20px;
-            color: var(--gold-light);
         }
 
         .spinner {
             width: 18px;
             height: 18px;
-            border: 2px solid rgba(212, 175, 55, 0.2);
-            border-top-color: var(--gold-primary);
+            border: 2px solid rgba(255, 105, 180, 0.2);
+            border-top-color: var(--accent-pink);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
@@ -386,9 +341,9 @@
         .qr-card {
             background: #fff;
             padding: 14px;
-            border-radius: 20px;
+            border-radius: 18px;
             display: inline-block;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(212, 175, 55, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 25px rgba(255, 105, 180, 0.25);
             margin-bottom: 14px;
         }
 
@@ -396,21 +351,21 @@
             width: 220px;
             height: 220px;
             display: block;
-            border-radius: 10px;
+            border-radius: 8px;
         }
 
         .code-box {
-            background: rgba(0, 0, 0, 0.7);
-            border: 1.5px dashed var(--gold-primary);
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px dashed rgba(255, 105, 180, 0.5);
             border-radius: 16px;
             padding: 20px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 30px;
-            font-weight: 800;
+            font-weight: 700;
             letter-spacing: 4px;
-            color: var(--gold-light);
+            color: #ffb6c1;
             margin-bottom: 12px;
-            text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+            text-shadow: 0 0 15px rgba(255, 105, 180, 0.4);
         }
 
         .hint-text {
@@ -420,24 +375,24 @@
         }
 
         .success-icon-wrap {
-            width: 70px;
-            height: 70px;
+            width: 64px;
+            height: 64px;
             border-radius: 50%;
-            background: rgba(34, 197, 94, 0.15);
-            border: 2px solid rgba(34, 197, 94, 0.4);
+            background: rgba(0, 240, 144, 0.15);
+            border: 2px solid rgba(0, 240, 144, 0.3);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
+            font-size: 30px;
             margin: 0 auto 16px auto;
-            color: #22c55e;
-            box-shadow: 0 0 35px rgba(34, 197, 94, 0.25);
+            color: #00f090;
+            box-shadow: 0 0 30px rgba(0, 240, 144, 0.25);
         }
 
         .session-code-container {
-            background: rgba(8, 10, 16, 0.95);
-            border: 1.5px solid var(--glass-border);
-            border-radius: 16px;
+            background: rgba(15, 10, 20, 0.9);
+            border: 1px solid rgba(255, 105, 180, 0.3);
+            border-radius: 14px;
             padding: 16px;
             margin: 18px 0;
             text-align: left;
@@ -452,10 +407,10 @@
 
         .session-code-label {
             font-size: 11px;
-            font-weight: 800;
+            font-weight: 700;
             text-transform: uppercase;
-            color: var(--gold-primary);
-            letter-spacing: 1px;
+            color: var(--accent-pink);
+            letter-spacing: 0.5px;
         }
 
         .session-code-text {
@@ -471,7 +426,7 @@
 
         .instructions-list {
             text-align: left;
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 14px;
             padding: 16px;
@@ -495,8 +450,8 @@
 
         .instructions-list code {
             font-family: 'JetBrains Mono', monospace;
-            color: var(--gold-light);
-            background: rgba(212, 175, 55, 0.1);
+            color: var(--accent-pink);
+            background: rgba(255, 105, 180, 0.1);
             padding: 2px 5px;
             border-radius: 4px;
         }
@@ -505,15 +460,13 @@
             margin-top: 24px;
             text-align: center;
             font-size: 11px;
-            color: rgba(161, 161, 170, 0.6);
-            letter-spacing: 1px;
-            text-transform: uppercase;
+            color: rgba(216, 191, 216, 0.6);
         }
     </style>
 </head>
 <body>
 
-    <!-- --- BACKGROUND VIDEO --- -->
+    <!-- --- BACKGROUND ANIMATED VIDEO --- -->
     <div class="bg-video-container">
         <video autoplay muted loop playsinline>
             <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-and-numbers-31991-large.mp4" type="video/mp4">
@@ -521,11 +474,8 @@
     </div>
     <div class="bg-overlay"></div>
 
-    <!-- --- MULTI-SONG VINYL MUSIC PLAYER WIDGET --- -->
-    <div class="vinyl-widget">
-        <div class="vinyl-disc" id="vinyl-art">
-            <div class="vinyl-center"></div>
-        </div>
+    <!-- --- MULTI-TRACK MUSIC PLAYER WIDGET --- -->
+    <div class="music-widget">
         <div class="music-controls-group">
             <select class="song-select" id="song-selector" onchange="changeSong()">
                 <option value="https://cdns-preview-d.dzcdn.net/stream/c-deda7b1b1178c772e0a2944b025f7a08-3.mp3">Starboy - The Weeknd</option>
@@ -535,7 +485,7 @@
                 <option value="https://cdns-preview-e.dzcdn.net/stream/c-e943265882e34771239c87d3a824e001-3.mp3">I Want to Fly - Uplifting</option>
             </select>
             <div class="player-row">
-                <span style="font-size: 10px; color: var(--gold-light); font-family: 'JetBrains Mono', monospace;" id="now-playing-label">Audio Deck</span>
+                <span style="font-size: 10px; color: var(--text-muted);" id="audio-status">Audio Ready</span>
                 <button class="play-pause-btn" id="play-music-btn" onclick="toggleMusic()">▶</button>
             </div>
         </div>
@@ -548,15 +498,15 @@
 
     <div class="container">
         <div class="header">
-            <div class="badge-logo">⚜ Xymbot Elite Suite</div>
-            <h1>Neural Pairing</h1>
-            <p class="subtitle">Secure custom WhatsApp session allocation protocol.</p>
+            <div class="badge-logo">🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊 & Xymbot</div>
+            <h1>Session Pairing Portal</h1>
+            <p class="subtitle">Connect your custom WhatsApp session securely.</p>
         </div>
 
         <div id="setup-section">
             <div class="input-group">
-                <label for="custom-session-input">Custom Session Identifier</label>
-                <input type="text" id="custom-session-input" placeholder="e.g. syam-elite-bot" autocomplete="off">
+                <label for="custom-session-input">Custom Session Name / ID</label>
+                <input type="text" id="custom-session-input" placeholder="e.g. sneha-vip-bot" autocomplete="off">
             </div>
 
             <div class="tabs">
@@ -564,26 +514,26 @@
                     <span>🔢</span> Pairing Code
                 </button>
                 <button class="tab-btn" id="tab-qr-btn" onclick="setMode('qr')">
-                    <span>📷</span> Hologram QR
+                    <span>📷</span> QR Code
                 </button>
             </div>
 
             <div id="mode-code-box">
                 <div class="input-group">
-                    <label for="phone-input">WhatsApp Number (+ Country Code)</label>
+                    <label for="phone-input">WhatsApp Phone Number (+ Country Code)</label>
                     <input type="tel" id="phone-input" placeholder="e.g. 919876543210" autocomplete="tel">
                 </div>
                 <button class="btn-primary" id="btn-get-code" onclick="requestCode()">
-                    <span>Request 8-Digit Pairing Code</span>
+                    <span>Request 8-Digit Code</span>
                 </button>
             </div>
 
             <div id="mode-qr-box" style="display: none;">
                 <p class="hint-text" style="margin-bottom: 16px;">
-                    Generate an encrypted holographic matrix for instant session linking.
+                    Click below to generate a fresh QR code to scan from WhatsApp &gt; Linked Devices.
                 </p>
                 <button class="btn-primary" id="btn-get-qr" onclick="requestQR()">
-                    <span>Generate Holographic QR</span>
+                    <span>Generate QR Code</span>
                 </button>
             </div>
         </div>
@@ -591,83 +541,86 @@
         <div id="display-section">
             <div class="status-box" id="status-card">
                 <div class="spinner" id="status-spinner"></div>
-                <span id="status-msg">Allocating Secure Neural Channel...</span>
+                <span id="status-msg">Connecting to WhatsApp...</span>
             </div>
 
             <div id="code-view" style="display: none;">
                 <div class="code-box" id="code-digits">----</div>
                 <p class="hint-text">
-                    WhatsApp &gt; <strong>Linked Devices</strong> &gt; <strong>Link with phone number</strong>.
+                    Open WhatsApp &gt; <strong>Linked Devices</strong> &gt; <strong>Link with phone number instead</strong> and enter this code.
                 </p>
             </div>
 
             <div id="qr-view" style="display: none;">
                 <div class="qr-card">
-                    <img id="qr-image" alt="Hologram QR Code">
+                    <img id="qr-image" alt="WhatsApp QR Code">
                 </div>
                 <p class="hint-text">
-                    Scan matrix using WhatsApp &gt; <strong>Linked Devices</strong>.
+                    Open WhatsApp &gt; <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong> and point your camera here.
                 </p>
             </div>
 
             <button class="btn-secondary" style="margin-top: 14px;" onclick="cancelPairing()">
-                ✕ Abort & Reset Protocol
+                ✕ Cancel & Try Again
             </button>
         </div>
 
         <div id="success-section">
             <div class="success-icon-wrap">✓</div>
-            <h2 style="font-family: 'Cinzel', serif; font-size: 22px; margin-bottom: 6px; color: #fff;">Link Secured!</h2>
-            <p class="subtitle" style="margin-bottom: 16px;">Your custom WhatsApp session token is ready.</p>
+            <h2 style="font-size: 22px; margin-bottom: 6px; color: #fff;">Pairing Successful!</h2>
+            <p class="subtitle" style="margin-bottom: 16px;">Your custom bot session is ready.</p>
 
             <div class="session-code-container">
                 <div class="session-code-header">
-                    <span class="session-code-label">Encrypted Session Token</span>
+                    <span class="session-code-label">Session ID Token</span>
                     <button id="copy-btn" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; width: auto;" onclick="copySessionId()">
-                        📋 Copy Token
+                        📋 Copy Code
                     </button>
                 </div>
                 <div class="session-code-text" id="session-id-display"></div>
             </div>
 
             <div class="instructions-list">
-                <div style="font-weight: 700; color: #fff; margin-bottom: 8px;">🚀 Deployment Protocol:</div>
+                <div style="font-weight: 700; color: #fff; margin-bottom: 8px;">🚀 Next Steps:</div>
                 <ol>
-                    <li>Copy your encrypted session token above.</li>
-                    <li>Bind <code>SESSION_ID</code> within your environment variables.</li>
-                    <li>Launch your bot container! ⚡</li>
+                    <li>Copy your custom <strong>Session ID</strong> above.</li>
+                    <li>Set environment variable <code>SESSION_ID</code> in Render to this string.</li>
+                    <li>Start your bot container!</li>
                 </ol>
             </div>
 
             <button class="btn-primary" onclick="resetForm()">
-                ↻ Initialize New Node
+                ↻ Pair Another Number
             </button>
         </div>
 
         <div class="footer">
-            Powered by Baileys Elite Core • Xymbot Ecosystem
+            Powered by Baileys Engine • 🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊 & Xymbot Ecosystem
         </div>
     </div>
 
     <script>
-        // --- MULTI-SONG VINYL AUDIO DECK SCRIPT ---
+        // --- MUSIC PLAYER SCRIPT ---
         const audio = document.getElementById('bg-audio');
         const musicBtn = document.getElementById('play-music-btn');
-        const vinylArt = document.getElementById('vinyl-art');
         const songSelector = document.getElementById('song-selector');
+        const audioStatus = document.getElementById('audio-status');
         let isPlaying = false;
 
         function toggleMusic() {
             if (isPlaying) {
                 audio.pause();
                 musicBtn.innerText = '▶';
-                vinylArt.classList.remove('playing');
+                audioStatus.innerText = 'Paused';
             } else {
                 audio.play().then(() => {
                     isPlaying = true;
                     musicBtn.innerText = '❚❚';
-                    vinylArt.classList.add('playing');
-                }).catch(e => console.log("Audio autoplay restricted", e));
+                    audioStatus.innerText = 'Playing...';
+                }).catch(e => {
+                    audioStatus.innerText = 'Click Play Again';
+                    console.log("Audio playback blocked", e);
+                });
             }
             isPlaying = !isPlaying;
         }
@@ -676,7 +629,11 @@
             const selectedUrl = songSelector.value;
             audio.src = selectedUrl;
             if (isPlaying) {
-                audio.play().catch(e => console.log("Audio play error", e));
+                audio.play().then(() => {
+                    audioStatus.innerText = 'Playing...';
+                }).catch(e => {
+                    audioStatus.innerText = 'Playback Error';
+                });
             }
         }
 
@@ -707,7 +664,7 @@
                 statusCard.style.color = '#ff6b81';
             } else {
                 statusCard.style.borderColor = 'var(--glass-border)';
-                statusCard.style.color = 'var(--gold-light)';
+                statusCard.style.color = 'var(--text-main)';
             }
         }
 
@@ -721,7 +678,7 @@
                 return;
             }
             if (!customSession) {
-                alert('Please provide a custom session identifier!');
+                alert('Please provide a custom session name!');
                 return;
             }
 
@@ -730,7 +687,7 @@
             document.getElementById('display-section').style.display = 'block';
             document.getElementById('code-view').style.display = 'none';
             document.getElementById('qr-view').style.display = 'none';
-            setStatus('Allocating secure channel with WhatsApp...');
+            setStatus('Requesting 8-digit Pairing Code from WhatsApp...');
 
             try {
                 const response = await fetch(`/pair?phone=${encodeURIComponent(phoneInput)}&custom=${encodeURIComponent(customSession)}`);
@@ -746,12 +703,12 @@
                     activeSessionId = phoneInput.replace(/[^0-9]/g, '');
                     document.getElementById('code-digits').innerText = data.code;
                     document.getElementById('code-view').style.display = 'block';
-                    setStatus('Awaiting device confirmation...', false, true);
+                    setStatus('Waiting for you to enter code in WhatsApp...', false, true);
 
                     startStatusPolling(activeSessionId);
                 }
             } catch (err) {
-                setStatus('❌ Uplink failed. Try again.', true, false);
+                setStatus('❌ Server connection error. Please try again.', true, false);
                 btn.disabled = false;
             }
         }
@@ -761,7 +718,7 @@
             const btn = document.getElementById('btn-get-qr');
 
             if (!customSession) {
-                alert('Please provide a custom session identifier!');
+                alert('Please provide a custom session name!');
                 return;
             }
 
@@ -770,7 +727,7 @@
             document.getElementById('display-section').style.display = 'block';
             document.getElementById('code-view').style.display = 'none';
             document.getElementById('qr-view').style.display = 'none';
-            setStatus('Generating Holographic Matrix...');
+            setStatus('Generating QR Code with WhatsApp servers...');
 
             try {
                 const response = await fetch(`/qr?custom=${encodeURIComponent(customSession)}`);
@@ -786,12 +743,12 @@
                     activeSessionId = data.id;
                     document.getElementById('qr-image').src = data.qr;
                     document.getElementById('qr-view').style.display = 'block';
-                    setStatus('Scan holographic matrix...', false, true);
+                    setStatus('Scan this QR code with WhatsApp...', false, true);
 
                     startStatusPolling(activeSessionId);
                 }
             } catch (err) {
-                setStatus('❌ Uplink failed. Try again.', true, false);
+                setStatus('❌ Server connection error. Please try again.', true, false);
                 btn.disabled = false;
             }
         }
@@ -812,7 +769,7 @@
                     if (!data || data.status === 'not_found') return;
 
                     if (data.status === 'linking') {
-                        setStatus(data.message || 'Linking secure channel...', false, true);
+                        setStatus(data.message || 'Linking WhatsApp account...', false, true);
                     } else if (data.status === 'waiting') {
                         if (data.qr && document.getElementById('qr-image').src !== data.qr) {
                             document.getElementById('qr-image').src = data.qr;
@@ -841,7 +798,7 @@
             navigator.clipboard.writeText(currentRawSessionId).then(() => {
                 const btn = document.getElementById('copy-btn');
                 btn.innerText = '✅ Copied!';
-                setTimeout(() => { btn.innerText = '📋 Copy Token'; }, 3000);
+                setTimeout(() => { btn.innerText = '📋 Copy Code'; }, 3000);
             });
         }
 

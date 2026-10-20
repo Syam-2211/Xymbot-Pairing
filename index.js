@@ -269,8 +269,8 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
                     const finalPhrase = customPhrase || 'default-session';
                     saveSessionPhrase(finalPhrase, base64Session);
 
-                    // Output ONLY the pure session data (base64 string) with nothing else attached
-                    const sessionId = base64Session;
+                    // Output the CUSTOM PHRASE as the sessionId so the user copies their custom name
+                    const sessionId = finalPhrase;
 
                     if (sessionStates[id]) {
                         sessionStates[id].status = 'connected';
@@ -283,7 +283,7 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
                         const rawId = conn.user?.id || '';
                         const normalizedJid = jidNormalizedUser(rawId) || (rawId.split(':')[0] + '@s.whatsapp.net');
                         
-                        const messageText = `🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊\n\n*✅ Pairing Successful!*\n\nYour Session Token:\n\n\`\`\`${sessionId}\`\`\``;
+                        const messageText = `🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊\n\n*✅ Pairing Successful!*\n\nYour Custom Session Name:\n\n\`\`\`${sessionId}\`\`\``;
 
                         await conn.sendMessage(normalizedJid, { text: messageText });
                     } catch (waErr) {}

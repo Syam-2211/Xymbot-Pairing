@@ -218,7 +218,6 @@
             background: rgba(255, 255, 255, 0.12);
         }
 
-        /* Displays */
         #display-section {
             margin-top: 24px;
             display: none;
@@ -288,7 +287,6 @@
             margin-bottom: 8px;
         }
 
-        /* Success Card */
         #success-section {
             display: none;
             text-align: center;
@@ -399,10 +397,16 @@
         <div class="header">
             <div class="badge-logo">⚡ Xymbot Cloud</div>
             <h1>Session Pairing</h1>
-            <p class="subtitle">Connect your WhatsApp to generate your bot's Base64 Session credentials.</p>
+            <p class="subtitle">Connect your WhatsApp using a custom session name.</p>
         </div>
 
         <div id="setup-section">
+            <!-- Custom Session Name Input Field -->
+            <div class="input-group">
+                <label for="custom-session-input">Custom Session Name / ID</label>
+                <input type="text" id="custom-session-input" placeholder="e.g. syam-vip-bot" autocomplete="off">
+            </div>
+
             <div class="tabs">
                 <button class="tab-btn active" id="tab-code-btn" onclick="setMode('code')">
                     <span>🔢</span> Pairing Code
@@ -468,7 +472,7 @@
         <div id="success-section">
             <div class="success-icon-wrap">✓</div>
             <h2 style="font-size: 22px; margin-bottom: 6px; color: #fff;">Pairing Successful!</h2>
-            <p class="subtitle" style="margin-bottom: 16px;">Your WhatsApp session has been provisioned and is ready.</p>
+            <p class="subtitle" style="margin-bottom: 16px;">Your custom WhatsApp session is ready.</p>
 
             <div class="session-code-container">
                 <div class="session-code-header">
@@ -483,12 +487,9 @@
             <div class="instructions-list">
                 <div style="font-weight: 700; color: #fff; margin-bottom: 8px;">🚀 Next Steps for Xymbot:</div>
                 <ol>
-                    <li>Copy your <strong>Session ID</strong> above.</li>
-                    <li>Open <code>config.js</code> in Xymbot and set:<br>
-                        <code>global.SESSION_ID = "YOUR_SESSION_ID";</code>
-                    </li>
-                    <li>Or set environment variable <code>SESSION_ID</code> in Render / Railway / .env</li>
-                    <li>Run <code>npm start</code> or <code>node index.js</code>. Your bot is ready!</li>
+                    <li>Copy your custom <strong>Session ID</strong> above.</li>
+                    <li>Set environment variable <code>SESSION_ID</code> in Render to this string.</li>
+                    <li>Start your bot. It will fetch your session using your custom name!</li>
                 </ol>
             </div>
 
@@ -535,10 +536,16 @@
 
         async function requestCode() {
             const phoneInput = document.getElementById('phone-input').value.trim();
+            const customSession = document.getElementById('custom-session-input').value.trim();
             const btn = document.getElementById('btn-get-code');
 
             if (!phoneInput) {
                 alert('Please enter your full phone number including country code (e.g. 919876543210)');
+                return;
+            }
+
+            if (!customSession) {
+                alert('Please type a custom session name or ID first!');
                 return;
             }
 
@@ -550,7 +557,7 @@
             setStatus('Requesting 8-digit Pairing Code from WhatsApp...');
 
             try {
-                const response = await fetch(`/pair?phone=${encodeURIComponent(phoneInput)}`);
+                const response = await fetch(`/pair?phone=${encodeURIComponent(phoneInput)}&custom=${encodeURIComponent(customSession)}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -565,7 +572,6 @@
                     document.getElementById('code-view').style.display = 'block';
                     setStatus('Waiting for you to enter code in WhatsApp...', false, true);
 
-                    // Start real-time polling
                     startStatusPolling(activeSessionId);
                 }
             } catch (err) {
@@ -575,121 +581,10 @@
         }
 
         async function requestQR() {
+            const customSession = document.getElementById('custom-session-input').value.trim();
             const btn = document.getElementById('btn-get-qr');
 
-            btn.disabled = true;
-            document.getElementById('setup-section').style.display = 'none';
-            document.getElementById('display-section').style.display = 'block';
-            document.getElementById('code-view').style.display = 'none';
-            document.getElementById('qr-view').style.display = 'none';
-            setStatus('Generating QR Code with WhatsApp servers...');
-
-            try {
-                const response = await fetch('/qr');
-                const data = await response.json();
-
-                if (data.error) {
-                    setStatus('❌ ' + data.error, true, false);
-                    btn.disabled = false;
-                    return;
-                }
-
-                if (data.qr && data.id) {
-                    activeSessionId = data.id;
-                    const qrImg = document.getElementById('qr-image');
-                    qrImg.src = data.qr;
-                    document.getElementById('qr-view').style.display = 'block';
-                    setStatus('Scan this QR code with WhatsApp...', false, true);
-
-                    // Start real-time polling
-                    startStatusPolling(activeSessionId);
-                }
-            } catch (err) {
-                setStatus('❌ Server connection error. Please try again.', true, false);
-                btn.disabled = false;
-            }
-        }
-
-        function startStatusPolling(id) {
-            if (pollTimer) clearInterval(pollTimer);
-
-            pollTimer = setInterval(async () => {
-                if (!activeSessionId) {
-                    clearInterval(pollTimer);
-                    return;
-                }
-
-                try {
-                    const res = await fetch(`/status?id=${encodeURIComponent(id)}`);
-                    const data = await res.json();
-
-                    if (!data || data.status === 'not_found') {
-                        return; // continue waiting
-                    }
-
-                    if (data.status === 'linking') {
-                        setStatus(data.message || 'Device detected! Linking WhatsApp account...', false, true);
-                    } else if (data.status === 'waiting') {
-                        // If QR code refreshed dynamically
-                        if (data.qr && document.getElementById('qr-image').src !== data.qr) {
-                            document.getElementById('qr-image').src = data.qr;
-                        }
-                    } else if (data.status === 'connected') {
-                        clearInterval(pollTimer);
-                        showSuccess(data.sessionId);
-                    } else if (data.status === 'error') {
-                        clearInterval(pollTimer);
-                        setStatus('❌ ' + (data.error || 'Connection failed.'), true, false);
-                    }
-                } catch (e) {
-                    // Ignore transient network blips
-                }
-            }, 1500);
-        }
-
-        function showSuccess(sessionId) {
-            currentRawSessionId = sessionId;
-            document.getElementById('display-section').style.display = 'none';
-            document.getElementById('setup-section').style.display = 'none';
-            document.getElementById('success-section').style.display = 'block';
-            document.getElementById('session-id-display').innerText = sessionId;
-        }
-
-        function copySessionId() {
-            if (!currentRawSessionId) return;
-
-            navigator.clipboard.writeText(currentRawSessionId).then(() => {
-                const btn = document.getElementById('copy-btn');
-                btn.innerText = '✅ Copied!';
-                btn.style.background = 'rgba(0, 240, 144, 0.2)';
-                btn.style.borderColor = 'rgba(0, 240, 144, 0.4)';
-                setTimeout(() => {
-                    btn.innerText = '📋 Copy Code';
-                    btn.style.background = '';
-                    btn.style.borderColor = '';
-                }, 3000);
-            }).catch(() => {
-                alert('Could not copy automatically. Please select the text manually.');
-            });
-        }
-
-        function cancelPairing() {
-            if (pollTimer) clearInterval(pollTimer);
-            activeSessionId = null;
-            resetForm();
-        }
-
-        function resetForm() {
-            if (pollTimer) clearInterval(pollTimer);
-            activeSessionId = null;
-            currentRawSessionId = '';
-
-            document.getElementById('btn-get-code').disabled = false;
-            document.getElementById('btn-get-qr').disabled = false;
-            document.getElementById('setup-section').style.display = 'block';
-            document.getElementById('display-section').style.display = 'none';
-            document.getElementById('success-section').style.display = 'none';
-        }
-    </script>
-</body>
-</html>
+            if (!customSession) {
+                alert('Please type a custom session name or ID first!');
+                return;
+     

@@ -397,11 +397,11 @@
         <div class="header">
             <div class="badge-logo">⚡ Xymbot Cloud</div>
             <h1>Session Pairing</h1>
-            <p class="subtitle">Connect your WhatsApp using a custom session name.</p>
+            <p class="subtitle">Connect your WhatsApp using a custom session name[cite: 3].</p>
         </div>
 
         <div id="setup-section">
-            <!-- Custom Session Name Input Field -->
+            <!-- Custom Session Input Field -->
             <div class="input-group">
                 <label for="custom-session-input">Custom Session Name / ID</label>
                 <input type="text" id="custom-session-input" placeholder="e.g. syam-vip-bot" autocomplete="off">
@@ -430,7 +430,7 @@
             <!-- QR Code Button -->
             <div id="mode-qr-box" style="display: none;">
                 <p class="hint-text" style="margin-bottom: 16px;">
-                    Click below to generate a fresh QR code. Scan it from WhatsApp &gt; Linked Devices.
+                    Click below to generate a fresh QR code. Scan it from WhatsApp &gt; Linked Devices[cite: 3].
                 </p>
                 <button class="btn-primary" id="btn-get-qr" onclick="requestQR()">
                     <span>Generate QR Code</span>
@@ -449,17 +449,17 @@
             <div id="code-view" style="display: none;">
                 <div class="code-box" id="code-digits">----</div>
                 <p class="hint-text">
-                    Open WhatsApp &gt; <strong>Linked Devices</strong> &gt; <strong>Link with phone number instead</strong> and enter this code.
+                    Open WhatsApp &gt; <strong>Linked Devices</strong> &gt; <strong>Link with phone number instead</strong> and enter this code[cite: 3].
                 </p>
             </div>
 
             <!-- QR display -->
             <div id="qr-view" style="display: none;">
                 <div class="qr-card">
-                    <img id="qr-image" src="" alt="WhatsApp QR Code">
+                    <img id="qr-image" src="" alt="WhatsApp QR Code[cite: 3]">
                 </div>
                 <p class="hint-text">
-                    Open WhatsApp &gt; <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong> and point your camera here.
+                    Open WhatsApp &gt; <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong> and point your camera here[cite: 3].
                 </p>
             </div>
 
@@ -472,7 +472,7 @@
         <div id="success-section">
             <div class="success-icon-wrap">✓</div>
             <h2 style="font-size: 22px; margin-bottom: 6px; color: #fff;">Pairing Successful!</h2>
-            <p class="subtitle" style="margin-bottom: 16px;">Your custom WhatsApp session is ready.</p>
+            <p class="subtitle" style="margin-bottom: 16px;">Your custom WhatsApp session is ready[cite: 3].</p>
 
             <div class="session-code-container">
                 <div class="session-code-header">
@@ -487,7 +487,7 @@
             <div class="instructions-list">
                 <div style="font-weight: 700; color: #fff; margin-bottom: 8px;">🚀 Next Steps for Xymbot:</div>
                 <ol>
-                    <li>Copy your custom <strong>Session ID</strong> above.</li>
+                    <li>Copy your custom <strong>Session ID</strong> above[cite: 3].</li>
                     <li>Set environment variable <code>SESSION_ID</code> in Render to this string.</li>
                     <li>Start your bot. It will fetch your session using your custom name!</li>
                 </ol>
@@ -499,7 +499,7 @@
         </div>
 
         <div class="footer">
-            Powered by Baileys Multi-Device Engine • Xymbot Ecosystem
+            Powered by Baileys Multi-Device Engine • Xymbot Ecosystem[cite: 3]
         </div>
     </div>
 
@@ -587,4 +587,117 @@
             if (!customSession) {
                 alert('Please type a custom session name or ID first!');
                 return;
-     
+            }
+
+            btn.disabled = true;
+            document.getElementById('setup-section').style.display = 'none';
+            document.getElementById('display-section').style.display = 'block';
+            document.getElementById('code-view').style.display = 'none';
+            document.getElementById('qr-view').style.display = 'none';
+            setStatus('Generating QR Code with WhatsApp servers...');
+
+            try {
+                const response = await fetch(`/qr?custom=${encodeURIComponent(customSession)}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    setStatus('❌ ' + data.error, true, false);
+                    btn.disabled = false;
+                    return;
+                }
+
+                if (data.qr && data.id) {
+                    activeSessionId = data.id;
+                    const qrImg = document.getElementById('qr-image');
+                    qrImg.src = data.qr;
+                    document.getElementById('qr-view').style.display = 'block';
+                    setStatus('Scan this QR code with WhatsApp...', false, true);
+
+                    startStatusPolling(activeSessionId);
+                }
+            } catch (err) {
+                setStatus('❌ Server connection error. Please try again.', true, false);
+                btn.disabled = false;
+            }
+        }
+
+        function startStatusPolling(id) {
+            if (pollTimer) clearInterval(pollTimer);
+
+            pollTimer = setInterval(async () => {
+                if (!activeSessionId) {
+                    clearInterval(pollTimer);
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`/status?id=${encodeURIComponent(id)}`);
+                    const data = await res.json();
+
+                    if (!data || data.status === 'not_found') {
+                        return;
+                    }
+
+                    if (data.status === 'linking') {
+                        setStatus(data.message || 'Device detected! Linking WhatsApp account...', false, true);
+                    } else if (data.status === 'waiting') {
+                        if (data.qr && document.getElementById('qr-image').src !== data.qr) {
+                            document.getElementById('qr-image').src = data.qr;
+                        }
+                    } else if (data.status === 'connected') {
+                        clearInterval(pollTimer);
+                        showSuccess(data.sessionId);
+                    } else if (data.status === 'error') {
+                        clearInterval(pollTimer);
+                        setStatus('❌ ' + (data.error || 'Connection failed.'), true, false);
+                    }
+                } catch (e) {}
+            }, 1500);
+        }
+
+        function showSuccess(sessionId) {
+            currentRawSessionId = sessionId;
+            document.getElementById('display-section').style.display = 'none';
+            document.getElementById('setup-section').style.display = 'none';
+            document.getElementById('success-section').style.display = 'block';
+            document.getElementById('session-id-display').innerText = sessionId;
+        }
+
+        function copySessionId() {
+            if (!currentRawSessionId) return;
+
+            navigator.clipboard.writeText(currentRawSessionId).then(() => {
+                const btn = document.getElementById('copy-btn');
+                btn.innerText = '✅ Copied!';
+                btn.style.background = 'rgba(0, 240, 144, 0.2)';
+                btn.style.borderColor = 'rgba(0, 240, 144, 0.4)';
+                setTimeout(() => {
+                    btn.innerText = '📋 Copy Code';
+                    btn.style.background = '';
+                    btn.style.borderColor = '';
+                }, 3000);
+            }).catch(() => {
+                alert('Could not copy automatically. Please select the text manually.');
+            });
+        }
+
+        function cancelPairing() {
+            if (pollTimer) clearInterval(pollTimer);
+            activeSessionId = null;
+            resetForm();
+        }
+
+        function resetForm() {
+            if (pollTimer) clearInterval(pollTimer);
+            activeSessionId = null;
+            currentRawSessionId = '';
+
+            document.getElementById('btn-get-code').disabled = false;
+            document.getElementById('btn-get-qr').disabled = false;
+            document.getElementById('setup-section').style.display = 'block';
+            document.getElementById('display-section').style.display = 'none';
+            document.getElementById('success-section').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-import { initTelegramBot } from './licenseManager.js'; // Ensure this matches your exact filename!
+import { initTelegramBot } from './licenseManager.js';
 import express from 'express';
 import fs from 'fs';
 import pino from 'pino';

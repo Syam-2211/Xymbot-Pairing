@@ -13,13 +13,14 @@ import pino from 'pino';
 import fs from 'fs';
 import path, { dirname } from 'path';
 import cors from 'cors';
+import qrcode from 'qrcode';
 import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
 import { verifyLicense as checkLicense, initTelegramBot } from './licenseManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// ── Load .env without dotenv ──────────────────────────────────────────────────
 const envPath = path.join(__dirname, '.env');
 if (fs.existsSync(envPath)) {
     try {
@@ -47,15 +48,46 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ── Active sessions & real-time state store ───────────────────────────────────
-const activeSessions = {};
-const sessionStates  = {};
+// ─── MONGODB INTEGRATION ──────────────────────────────────────────────
+// Make sure to add MONGO_URI in your Render Environment Variables!
+const MONGO_URI = process.env.MONGO_URI;
 
-// Clean up stale session entries older than 20 minutes
+if (!MONGO_URI) {
+    console.error('❌ MONGO_URI environment variable is missing! Sessions will not save.');
+} else {
+    mongoose.connect(MONGO_URI)
+      .then(() => console.log('✅ Connected to MongoDB Atlas'))
+      .catch(err => console.error('❌ MongoDB Connection Error:', err));
+}
+
+const SessionSchema = new mongoose.Schema({
+    phrase: { type: String, required: true, unique: true },
+    data: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+const SessionModel = mongoose.model('Session', SessionSchema);
+
+async function saveSessionPhrase(phrase, base64Data) {
+    const cleanPhrase = phrase.toLowerCase().trim();
+    try {
+        await SessionModel.findOneAndUpdate(
+            { phrase: cleanPhrase },
+            { data: base64Data },
+            { upsert: true, new: true }
+        );
+        console.log(`✅ Session saved to MongoDB for phrase: ${cleanPhrase}`);
+    } catch (err) {
+        console.error('❌ Failed to save session to MongoDB:', err);
+    }
+}
+
+const activeSessions = {};
+const sessionStates = {};
+
 setInterval(() => {
     const now = Date.now();
     for (const [id, state] of Object.entries(sessionStates)) {
-        if (now - state.lastUpdated > 20 * 60 * 1000) {
+        if (now - state.lastUpdated > 15 * 60 * 1000) {
             delete sessionStates[id];
             const sessionDir = path.join(__dirname, `session-${id}`);
             if (fs.existsSync(sessionDir)) {
@@ -65,15 +97,16 @@ setInterval(() => {
     }
 }, 5 * 60 * 1000);
 
-// ── Core pairing function ─────────────────────────────────────────────────────
-async function startAuth(id, onReady = null, isReconnect = false) {
+async function startAuth(id, type, onReady = null, isReconnect = false, customPhrase = '') {
     const sessionDir = path.join(__dirname, `session-${id}`);
 
     if (!isReconnect) {
         sessionStates[id] = {
             id,
+            type,
             status: 'initializing',
             message: 'Initializing WhatsApp connection...',
+            qr: null,
             code: null,
             sessionId: null,
             error: null,
@@ -84,25 +117,26 @@ async function startAuth(id, onReady = null, isReconnect = false) {
             try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch (e) {}
         }
     } else {
-        if (sessionStates[id]) sessionStates[id].lastUpdated = Date.now();
+        if (sessionStates[id]) {
+            sessionStates[id].lastUpdated = Date.now();
+        }
     }
 
     let state, saveCreds;
     try {
         const authData = await useMultiFileAuthState(sessionDir);
-        state     = authData.state;
+        state = authData.state;
         saveCreds = authData.saveCreds;
     } catch (err) {
         console.error(`Auth state error for ${id}:`, err.message);
         if (sessionStates[id]) {
             sessionStates[id].status = 'error';
-            sessionStates[id].error  = 'Failed to initialize session directory.';
+            sessionStates[id].error = 'Failed to initialize session directory.';
         }
         if (onReady) onReady({ error: 'Failed to initialize session directory.' });
         return;
     }
 
-    // Fetch latest WA version with fallback
     let version = [2, 3000, 1043857760];
     try {
         const v = await fetchLatestBaileysVersion();
@@ -120,83 +154,91 @@ async function startAuth(id, onReady = null, isReconnect = false) {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
         },
-        markOnlineOnConnect: false,
-        connectTimeoutMs: 60000,
-        defaultQueryTimeoutMs: 60000,
-        keepAliveIntervalMs: 30000,
+        markOnlineOnConnect: false
     });
 
     activeSessions[id] = conn;
     let initialResponded = false;
 
-    // ── Request pairing code ──────────────────────────────────────────────────
-    if (!isReconnect) {
-        if (!conn.authState.creds.registered) {
-            setTimeout(async () => {
-                try {
-                    let code = await conn.requestPairingCode(id);
-                    code = code?.match(/.{1,4}/g)?.join('-') || code;
-
-                    if (sessionStates[id]) {
-                        sessionStates[id].status    = 'waiting';
-                        sessionStates[id].code      = code;
-                        sessionStates[id].message   = 'Pairing code generated. Enter this in WhatsApp.';
-                        sessionStates[id].lastUpdated = Date.now();
-                    }
-
-                    if (onReady && !initialResponded) {
-                        initialResponded = true;
-                        onReady({ code, id });
-                    }
-                } catch (err) {
-                    console.error(`Pairing Code Error for ${id}:`, err.message);
-                    const errMsg = 'Failed to fetch pairing code from WhatsApp. Please try again.';
-                    if (sessionStates[id]) {
-                        sessionStates[id].status = 'error';
-                        sessionStates[id].error  = errMsg;
-                        sessionStates[id].lastUpdated = Date.now();
-                    }
-                    if (onReady && !initialResponded) {
-                        initialResponded = true;
-                        onReady({ error: errMsg });
-                    }
-                }
-            }, 3000);
-        } else {
-            const errMsg = 'Number already registered. Please use a different number or clear session.';
-            if (sessionStates[id]) {
-                sessionStates[id].status = 'error';
-                sessionStates[id].error  = errMsg;
-            }
-            if (onReady && !initialResponded) {
-                initialResponded = true;
-                onReady({ error: errMsg });
-            }
-        }
-    }
-
     conn.ev.on('creds.update', saveCreds);
 
     conn.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect } = update;
+        const { connection, lastDisconnect, qr } = update;
+
+        if (type === 'qr' && qr) {
+            try {
+                const qrImage = await qrcode.toDataURL(qr);
+                if (sessionStates[id]) {
+                    sessionStates[id].status = 'waiting';
+                    sessionStates[id].qr = qrImage;
+                    sessionStates[id].message = 'Scan this QR code with WhatsApp.';
+                    sessionStates[id].lastUpdated = Date.now();
+                }
+
+                if (onReady && !initialResponded) {
+                    initialResponded = true;
+                    onReady({ qr: qrImage, id });
+                }
+            } catch (err) {
+                if (onReady && !initialResponded) {
+                    initialResponded = true;
+                    onReady({ error: 'Failed to generate QR Code image.' });
+                }
+            }
+        }
+
+        if (type === 'code' && !isReconnect && !initialResponded) {
+            if (!conn.authState.creds.registered) {
+                setTimeout(async () => {
+                    try {
+                        if (initialResponded) return;
+                        let code = await conn.requestPairingCode(id);
+                        code = code?.match(/.{1,4}/g)?.join('-') || code;
+                        
+                        if (sessionStates[id]) {
+                            sessionStates[id].status = 'waiting';
+                            sessionStates[id].code = code;
+                            sessionStates[id].message = 'Pairing code generated. Enter this in WhatsApp.';
+                            sessionStates[id].lastUpdated = Date.now();
+                        }
+
+                        if (onReady && !initialResponded) {
+                            initialResponded = true;
+                            onReady({ code, id });
+                        }
+                    } catch (err) {
+                        console.error(`Pairing Code Error for ${id}:`, err.message);
+                        const errMsg = 'Failed to fetch code from WhatsApp servers. Please try again.';
+                        if (sessionStates[id]) {
+                            sessionStates[id].status = 'error';
+                            sessionStates[id].error = errMsg;
+                            sessionStates[id].lastUpdated = Date.now();
+                        }
+                        if (onReady && !initialResponded) {
+                            initialResponded = true;
+                            onReady({ error: errMsg });
+                        }
+                    }
+                }, 4000);
+            }
+        }
 
         if (connection === 'connecting') {
             if (sessionStates[id] && sessionStates[id].status !== 'connected') {
-                sessionStates[id].status    = 'linking';
-                sessionStates[id].message   = 'Connecting to WhatsApp...';
+                sessionStates[id].status = 'linking';
+                sessionStates[id].message = 'Connecting to WhatsApp...';
                 sessionStates[id].lastUpdated = Date.now();
             }
         }
 
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
-            console.log(`Connection closed for ${id} (code: ${statusCode})`);
+            console.log(`Connection closed for ${id} (statusCode:${statusCode})`);
 
             if (statusCode === DisconnectReason.loggedOut) {
-                console.log(`Device logged out for ${id}.`);
                 if (sessionStates[id]) {
                     sessionStates[id].status = 'error';
-                    sessionStates[id].error  = 'Rejected or logged out by WhatsApp. Please try again.';
+                    sessionStates[id].error = 'Logged out or rejected by WhatsApp device. Please try again.';
                     sessionStates[id].lastUpdated = Date.now();
                 }
                 if (fs.existsSync(sessionDir)) {
@@ -209,23 +251,23 @@ async function startAuth(id, onReady = null, isReconnect = false) {
                     onReady({ error: 'Logged out. Please try again.' });
                 }
             } else {
-                // Non-logout disconnect → reconnect to finalize handshake
-                console.log(`Handshake reconnect for ${id} (code: ${statusCode})`);
                 if (sessionStates[id]) {
-                    sessionStates[id].status  = 'linking';
+                    sessionStates[id].status = 'linking';
                     sessionStates[id].message = 'Device detected! Finalizing encryption & session...';
                     sessionStates[id].lastUpdated = Date.now();
                 }
                 delete activeSessions[id];
                 try { conn.end(); } catch (e) {}
 
-                setTimeout(() => { startAuth(id, null, true); }, 1500);
+                setTimeout(() => {
+                    startAuth(id, type, null, true, customPhrase);
+                }, 1500);
             }
         } else if (connection === 'open') {
             console.log(`Successfully paired with ${id}! Packaging credentials...`);
             if (sessionStates[id]) {
-                sessionStates[id].status  = 'linking';
-                sessionStates[id].message = 'Pairing verified! Generating Session ID...';
+                sessionStates[id].status = 'linking';
+                sessionStates[id].message = 'Pairing verified! Saving session to database...';
                 sessionStates[id].lastUpdated = Date.now();
             }
 
@@ -234,41 +276,47 @@ async function startAuth(id, onReady = null, isReconnect = false) {
             try {
                 const credsPath = path.join(sessionDir, 'creds.json');
                 if (fs.existsSync(credsPath)) {
-                    const credsData     = fs.readFileSync(credsPath, 'utf8');
-                    const base64Session = Buffer.from(credsData).toString('base64');
-                    const sessionId     = `XYMBOT~${base64Session}`;
+                    
+                    // Bundle ALL session files, not just creds.json
+                    const sessionFiles = fs.readdirSync(sessionDir);
+                    const sessionObj = {};
+                    for (const file of sessionFiles) {
+                        const filePath = path.join(sessionDir, file);
+                        if (fs.statSync(filePath).isFile()) {
+                            const content = fs.readFileSync(filePath, 'utf8');
+                            try {
+                                sessionObj[file] = JSON.parse(content);
+                            } catch (e) {
+                                sessionObj[file] = content;
+                            }
+                        }
+                    }
+                    const base64Session = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
+                    
+                    // Fallback to xym-sneha-bot if the custom phrase is missing or fails
+                    const finalPhrase = customPhrase || 'xym-sneha-bot';
+                    
+                    // Save to MongoDB
+                    await saveSessionPhrase(finalPhrase, base64Session);
+
+                    const sessionId = finalPhrase;
 
                     if (sessionStates[id]) {
-                        sessionStates[id].status    = 'connected';
+                        sessionStates[id].status = 'connected';
                         sessionStates[id].sessionId = sessionId;
-                        sessionStates[id].message   = 'Pairing Successful!';
+                        sessionStates[id].message = 'Pairing Successful & Saved to DB!';
                         sessionStates[id].lastUpdated = Date.now();
                     }
 
-                    // Attempt to DM the session ID to the user's WhatsApp
                     try {
-                        const rawId        = conn.user?.id || '';
+                        const rawId = conn.user?.id || '';
                         const normalizedJid = jidNormalizedUser(rawId) || (rawId.split(':')[0] + '@s.whatsapp.net');
-
-                        const messageText =
-                            `🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊\n\n` +
-                            `*✅ Pairing Successful!*\n\n` +
-                            `Here is your *SESSION ID* (tap and hold to copy):\n\n` +
-                            `\`\`\`${sessionId}\`\`\`\n\n` +
-                            `*How to use on Render:*\n` +
-                            `1. Copy the SESSION ID above.\n` +
-                            `2. Go to Render → Environment → set \`SESSION_ID\`\n` +
-                            `3. Also set your \`LICENSE_KEY\` in Render environment.\n` +
-                            `4. Redeploy → Your bot is live!\n\n` +
-                            `⚠️ *DO NOT SHARE THIS SESSION ID WITH ANYONE!*`;
+                        
+                        const messageText = `🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊\n\n*✅ Pairing Successful!*\n\nYour Custom Session Name:\n\n\`\`\`${sessionId}\`\`\``;
 
                         await conn.sendMessage(normalizedJid, { text: messageText });
-                        console.log(`Session ID dispatched to WhatsApp user ${normalizedJid}`);
-                    } catch (waErr) {
-                        console.warn('Could not DM session (still available on web UI):', waErr.message);
-                    }
+                    } catch (waErr) {}
 
-                    // Cleanup after a safe delay
                     setTimeout(() => {
                         try {
                             if (fs.existsSync(sessionDir)) {
@@ -277,29 +325,50 @@ async function startAuth(id, onReady = null, isReconnect = false) {
                             delete activeSessions[id];
                             conn.end();
                         } catch (e) {}
-                    }, 10000);
+                    }, 8000);
                 } else {
-                    console.error('creds.json not found in', sessionDir);
                     if (sessionStates[id]) {
                         sessionStates[id].status = 'error';
-                        sessionStates[id].error  = 'Credentials file was not created. Please try again.';
+                        sessionStates[id].error = 'Credentials file was not created. Please try again.';
                     }
                 }
             } catch (err) {
-                console.error('Session processing error:', err);
                 if (sessionStates[id]) {
                     sessionStates[id].status = 'error';
-                    sessionStates[id].error  = 'Failed to process session: ' + err.message;
+                    sessionStates[id].error = 'Failed to process session: ' + err.message;
                 }
             }
         }
     });
 }
 
-// ── /pair — 8-digit pairing code endpoint ────────────────────────────────────
+// ─── FETCH FROM MONGODB ───────────────────────────────────────────────
+app.get('/api/get-session', async (req, res) => {
+    const phrase = req.query.phrase;
+    if (!phrase) return res.status(400).json({ error: 'Phrase parameter missing' });
+    
+    try {
+        const sessionRecord = await SessionModel.findOne({ phrase: phrase.toLowerCase().trim() });
+        if (!sessionRecord) {
+            return res.status(404).json({ error: 'Session phrase not found or expired' });
+        }
+        res.json({ success: true, sessionData: sessionRecord.data });
+    } catch (e) {
+        console.error('DB Fetch Error:', e);
+        res.status(500).json({ error: 'Database query failed' });
+    }
+});
+
 app.get('/pair', async (req, res) => {
     let phone = req.query.phone;
+    let customPhrase = req.query.custom;
+
     if (!phone) return res.json({ error: 'Please provide a phone number.' });
+    
+    if (!customPhrase || customPhrase.trim() === '') {
+        customPhrase = 'xym-sneha-bot';
+    }
+    
     phone = phone.replace(/[^0-9]/g, '');
 
     if (phone.length < 8) {
@@ -310,18 +379,18 @@ app.get('/pair', async (req, res) => {
     const timeout = setTimeout(() => {
         if (!responded) {
             responded = true;
-            res.json({ error: 'WhatsApp servers took too long to respond. Please try again.' });
+            res.json({ error: 'WhatsApp servers took too long to respond. Try again.' });
         }
     }, 20000);
 
     try {
-        await startAuth(phone, (data) => {
+        await startAuth(phone, 'code', (data) => {
             if (!responded) {
                 responded = true;
                 clearTimeout(timeout);
                 res.json(data);
             }
-        });
+        }, false, customPhrase);
     } catch (e) {
         if (!responded) {
             responded = true;
@@ -331,38 +400,71 @@ app.get('/pair', async (req, res) => {
     }
 });
 
-// ── /status — real-time polling endpoint ─────────────────────────────────────
+app.get('/qr', async (req, res) => {
+    let customPhrase = req.query.custom;
+    
+    if (!customPhrase || customPhrase.trim() === '') {
+        customPhrase = 'xym-sneha-bot';
+    }
+
+    const id = 'QR-' + Date.now();
+
+    let responded = false;
+    const timeout = setTimeout(() => {
+        if (!responded) {
+            responded = true;
+            res.json({ error: 'WhatsApp servers took too long to respond. Try again.' });
+        }
+    }, 20000);
+
+    try {
+        await startAuth(id, 'qr', (data) => {
+            if (!responded) {
+                responded = true;
+                clearTimeout(timeout);
+                res.json(data);
+            }
+        }, false, customPhrase);
+    } catch (e) {
+        if (!responded) {
+            responded = true;
+            clearTimeout(timeout);
+            res.json({ error: 'Internal server error: ' + e.message });
+        }
+    }
+});
+
 app.get('/status', (req, res) => {
     const id = req.query.id;
     if (!id || !sessionStates[id]) {
         return res.json({ status: 'not_found', error: 'Session not found or expired.' });
     }
+
     const state = sessionStates[id];
     res.json({
-        id:        state.id,
-        status:    state.status,
-        code:      state.code      || null,
+        id: state.id,
+        type: state.type,
+        status: state.status,
+        code: state.code || null,
+        qr: state.qr || null,
         sessionId: state.sessionId || null,
-        message:   state.message   || null,
-        error:     state.error     || null
+        message: state.message || null,
+        error: state.error || null
     });
 });
 
-// ── /api/verify-license — license verification endpoint ───────────────────────
 app.get('/api/verify-license', (req, res) => {
-    const key    = req.query.key;
+    const key = req.query.key;
     const result = checkLicense(key);
     res.json(result);
 });
 
-// ── /health — uptime monitor ──────────────────────────────────────────────────
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime() });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`🌐 Xymbot Pairing Server running on port ${PORT}`);
-    // Start embedded Telegram License Bot (only if TELEGRAM_BOT_TOKEN is set)
+    console.log(`Xymbot Pairing Server is running on port ${PORT}`);
     initTelegramBot(app);
 });

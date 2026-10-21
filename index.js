@@ -3,6 +3,7 @@ import express from 'express';
 import fs from 'fs';
 import pino from 'pino';
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 import makeWASocket, {
     useMultiFileAuthState,
     delay,
@@ -22,6 +23,7 @@ if (process.env.MONGO_URI) {
 
 const sessionSchema = new mongoose.Schema({
     sessionId: { type: String, required: true },
+    sessionName: { type: String, unique: true, sparse: true },
     sessionData: { type: String, required: true },
     createdAt: { type: Date, default: Date.now }
 });
@@ -39,7 +41,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const activePairings = new Map();
 
-function startPairingSocket({ sessionId, sessionFolder, state, saveCreds, generateQr }) {
+function startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr }) {
     let socket;
     let restartCount = 0;
     let completed = false;
@@ -86,13 +88,17 @@ function startPairingSocket({ sessionId, sessionFolder, state, saveCreds, genera
                     const base64Session = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
                     const finalSessionId = 'XYMBOT~' + base64Session;
 
-                    if (process.env.MONGO_URI) {
-                        await Session.create({ sessionId: finalSessionId, sessionData: base64Session })
-                            .catch(error => console.error('MongoDB save error:', error.message));
+                    if (!process.env.MONGO_URI || mongoose.connection.readyState !== 1) {
+                        throw new Error('MongoDB is required to save named pairing sessions.');
                     }
+                    await Session.create({
+                        sessionId: finalSessionId,
+                        sessionName,
+                        sessionData: base64Session
+                    });
 
                     completed = true;
-                    activePairings.set(sessionId, { status: 'connected', sessionId: finalSessionId });
+                    activePairings.set(sessionId, { status: 'connected', sessionName });
                     try { fs.rmSync(sessionFolder, { recursive: true, force: true }); } catch (error) {}
                     currentSocket.ws.close();
                 } else if (connection === 'close') {
@@ -122,7 +128,13 @@ function startPairingSocket({ sessionId, sessionFolder, state, saveCreds, genera
                 }
             } catch (error) {
                 console.error(`Pairing session ${sessionId} failed:`, error);
-                activePairings.set(sessionId, { status: 'error', error: 'Failed to save or complete the WhatsApp session.' });
+                const duplicateSessionName = error?.code === 11000;
+                activePairings.set(sessionId, {
+                    status: 'error',
+                    error: duplicateSessionName
+                        ? 'This custom session name is already in use. Choose a different name and try again.'
+                        : error.message || 'Failed to save or complete the WhatsApp session.'
+                });
             }
         });
 
@@ -328,8 +340,9 @@ app.get('/', (req, res) => {
 
         <div id="setup-section">
             <div class="input-group">
-                <label for="custom-session-input">Custom Session Name / ID</label>
-                <input type="text" id="custom-session-input" placeholder="e.g. sneha-vip-bot" autocomplete="off">
+                <label for="custom-session-input">Custom Session Name</label>
+                <input type="text" id="custom-session-input" placeholder="e.g. sneha-vip-bot" maxlength="40" pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,39}" autocomplete="off" required>
+                <p class="hint-text">Use 3–40 letters, numbers, hyphens, or underscores. You will enter this name in your bot's <code>SESSION_NAME</code> setting.</p>
             </div>
 
             <div class="tabs">
@@ -383,8 +396,8 @@ app.get('/', (req, res) => {
 
             <div class="session-code-container">
                 <div class="session-code-header">
-                    <span class="session-code-label">Session ID Token</span>
-                    <button id="copy-btn" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; width: auto;" onclick="copySessionId()">📋 Copy Code</button>
+                    <span class="session-code-label">Custom Session Name</span>
+                    <button id="copy-btn" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; width: auto;" onclick="copySessionId()">📋 Copy Name</button>
                 </div>
                 <div class="session-code-text" id="session-id-display"></div>
             </div>
@@ -392,9 +405,10 @@ app.get('/', (req, res) => {
             <div class="instructions-list">
                 <div style="font-weight: 700; color: #fff; margin-bottom: 8px;">🚀 Next Steps:</div>
                 <ol>
-                    <li>Copy your custom <strong>Session ID</strong> above.</li>
-                    <li>Set environment variable <code>SESSION_ID</code> in Render to this string.</li>
-                    <li>Start your bot container!</li>
+                    <li>Copy this <strong>session name</strong>.</li>
+                    <li>Set <code>SESSION_NAME</code> to the name in your Xymbot service.</li>
+                    <li>Set your approved <code>LICENSE_KEY</code> in the same service.</li>
+                    <li>Deploy Xymbot. It securely downloads its session from this site; no Base64 session text is needed.</li>
                 </ol>
             </div>
 
@@ -490,10 +504,14 @@ app.get('/', (req, res) => {
 
         async function requestCode() {
             const phoneInput = document.getElementById('phone-input').value.trim();
-            const customSession = document.getElementById('custom-session-input').value.trim();
+            const customSession = document.getElementById('custom-session-input').value.trim().toLowerCase();
             const btn = document.getElementById('btn-get-code');
 
             if (!phoneInput) { alert('Please enter your phone number with country code!'); return; }
+            if (!/^[a-z0-9][a-z0-9_-]{2,39}$/.test(customSession)) {
+                alert('Enter a custom session name using 3-40 letters, numbers, underscores, or hyphens.');
+                return;
+            }
             btn.disabled = true;
 
             document.getElementById('setup-section').style.display = 'none';
@@ -505,7 +523,7 @@ app.get('/', (req, res) => {
             try {
                 const res = await fetch(\`/pair?phone=\${encodeURIComponent(phoneInput)}&custom=\${encodeURIComponent(customSession)}\`);
                 const data = await res.json();
-                if (data.error) {
+                if (!res.ok || data.error) {
                     setStatus('❌ ' + data.error, true, false);
                     btn.disabled = false;
                     setTimeout(() => { document.getElementById('display-section').style.display = 'none'; document.getElementById('setup-section').style.display = 'block'; }, 3000);
@@ -525,8 +543,12 @@ app.get('/', (req, res) => {
         }
 
         async function requestQR() {
-            const customSession = document.getElementById('custom-session-input').value.trim();
+            const customSession = document.getElementById('custom-session-input').value.trim().toLowerCase();
             const btn = document.getElementById('btn-get-qr');
+            if (!/^[a-z0-9][a-z0-9_-]{2,39}$/.test(customSession)) {
+                alert('Enter a custom session name using 3-40 letters, numbers, underscores, or hyphens.');
+                return;
+            }
             btn.disabled = true;
 
             document.getElementById('setup-section').style.display = 'none';
@@ -577,7 +599,7 @@ app.get('/', (req, res) => {
                         }
                     } else if (data.status === 'connected') {
                         clearInterval(pollTimer);
-                        showSuccess(data.sessionId);
+                        showSuccess(data.sessionName);
                     } else if (data.status === 'error') {
                         clearInterval(pollTimer);
                         setStatus('❌ ' + (data.error || 'Connection failed.'), true, false);
@@ -589,8 +611,8 @@ app.get('/', (req, res) => {
             }, 1500);
         }
 
-        function showSuccess(sessionId) {
-            currentRawSessionId = sessionId;
+        function showSuccess(sessionName) {
+            currentRawSessionId = sessionName;
             document.getElementById('display-section').style.display = 'none';
             document.getElementById('setup-section').style.display = 'none';
             document.getElementById('success-section').style.display = 'block';
@@ -602,7 +624,7 @@ app.get('/', (req, res) => {
             navigator.clipboard.writeText(currentRawSessionId).then(() => {
                 const btn = document.getElementById('copy-btn');
                 btn.innerText = '✅ Copied!';
-                setTimeout(() => { btn.innerText = '📋 Copy Code'; }, 3000);
+                setTimeout(() => { btn.innerText = '📋 Copy Name'; }, 3000);
             });
         }
 
@@ -685,10 +707,18 @@ app.get('/', (req, res) => {
 });
 
 // ─── PAIRING CODE BACKEND ROUTE ────────────────────────────────────────────
+function normalizeSessionName(value) {
+    if (typeof value !== 'string') return null;
+    const name = value.trim().toLowerCase();
+    return /^[a-z0-9][a-z0-9_-]{2,39}$/.test(name) ? name : null;
+}
+
 app.get('/pair', async (req, res) => {
     let phone = req.query.phone;
     if (!phone) return res.json({ error: 'Phone number is required' });
     phone = phone.replace(/[^0-9]/g, '');
+    const sessionName = normalizeSessionName(req.query.custom);
+    if (!sessionName) return res.status(400).json({ error: 'Enter a custom session name using 3-40 letters, numbers, underscores, or hyphens.' });
 
     const sessionId = 'session-' + Date.now();
     const sessionFolder = `./tmp/${sessionId}`;
@@ -697,8 +727,14 @@ app.get('/pair', async (req, res) => {
     activePairings.set(sessionId, { status: 'waiting', sessionId: null });
 
     try {
+        if (!process.env.MONGO_URI || mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ error: 'Named sessions are unavailable because MongoDB is not connected.' });
+        }
+        if (await Session.exists({ sessionName })) {
+            return res.status(409).json({ error: 'This custom session name is already in use. Choose another name.' });
+        }
         const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
-        const socket = startPairingSocket({ sessionId, sessionFolder, state, saveCreds, generateQr: false });
+        const socket = startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr: false });
 
         if (!socket.authState.creds.registered) {
             await socket.waitForSocketOpen();
@@ -721,14 +757,23 @@ app.get('/pair', async (req, res) => {
 
 // ─── QR CODE BACKEND ROUTE ─────────────────────────────────────────────────
 app.get('/qr', async (req, res) => {
+    const sessionName = normalizeSessionName(req.query.custom);
+    if (!sessionName) return res.status(400).json({ error: 'Enter a custom session name using 3-40 letters, numbers, underscores, or hyphens.' });
+
     const sessionId = 'session-' + Date.now();
     const sessionFolder = `./tmp/${sessionId}`;
     activePairings.set(sessionId, { status: 'waiting', qr: null });
 
     try {
+        if (!process.env.MONGO_URI || mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ error: 'Named sessions are unavailable because MongoDB is not connected.' });
+        }
+        if (await Session.exists({ sessionName })) {
+            return res.status(409).json({ error: 'This custom session name is already in use. Choose another name.' });
+        }
         if (!fs.existsSync(sessionFolder)) fs.mkdirSync(sessionFolder, { recursive: true });
         const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
-        startPairingSocket({ sessionId, sessionFolder, state, saveCreds, generateQr: true });
+        startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr: true });
 
         return res.status(202).json({ id: sessionId });
     } catch (error) {
@@ -816,6 +861,48 @@ app.post('/api/license-contact', async (req, res) => {
     } catch (error) {
         console.error('Website owner contact failed:', error);
         return res.status(503).json({ message: error.message || 'Could not send your message to the owner.' });
+    }
+});
+
+app.get('/api/sessions/:sessionName', async (req, res) => {
+    const sessionName = normalizeSessionName(req.params.sessionName);
+    const authorization = req.get('authorization') || '';
+    const match = authorization.match(/^Bearer\s+(\S+)$/i);
+    const licenseKey = match?.[1]?.trim().toUpperCase();
+
+    if (!sessionName || !licenseKey) {
+        return res.status(401).json({ message: 'A valid session name and license key are required.' });
+    }
+    if (!process.env.MONGO_URI || mongoose.connection.readyState !== 1) {
+        return res.status(503).json({ message: 'Session retrieval is unavailable because MongoDB is not connected.' });
+    }
+
+    try {
+        const session = await Session.findOne({ sessionName }).select('sessionData').lean();
+        if (!session) return res.status(404).json({ message: 'Named session not found.' });
+
+        const license = await License.findOne({ key: licenseKey });
+        if (!license) return res.status(403).json({ message: 'License key not found.' });
+        if (license.expiresAt && license.expiresAt < new Date()) {
+            return res.status(403).json({ message: 'License key has expired.' });
+        }
+
+        const sessionBinding = crypto.createHash('sha256').update(sessionName).digest('hex').substring(0, 32);
+        if (license.boundSession && license.boundSession !== sessionBinding) {
+            return res.status(403).json({ message: 'License key is bound to a different session name.' });
+        }
+
+        if (!license.boundSession) {
+            license.boundSession = sessionBinding;
+            license.isActivated = true;
+            license.expiresAt = new Date(Date.now() + license.durationDays * 24 * 60 * 60 * 1000);
+            await license.save();
+        }
+
+        return res.json({ sessionData: session.sessionData });
+    } catch (error) {
+        console.error('Named session retrieval failed:', error);
+        return res.status(500).json({ message: 'Could not retrieve this session.' });
     }
 });
 

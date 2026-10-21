@@ -6,9 +6,9 @@
 ---
 
 ## 🌟 About
-This is a lightweight, standalone web application built with Express.js and Baileys. It provides a beautiful web interface where users can choose to scan a **QR Code** or enter their phone number to receive an 8-digit **WhatsApp Pairing Code**. 
+This is a lightweight, standalone web application built with Express.js and Baileys. It provides a web interface where users can choose to scan a **QR Code** or enter their phone number to receive an 8-digit **WhatsApp Pairing Code**.
 
-Once connected, this server automatically generates a WhatsApp **Base64 Session ID** (`XYMBOT~...`) and sends it directly to the user's WhatsApp with tap-to-copy formatting!
+Once connected, the server securely stores credentials under the custom session name chosen by the client. Xymbot loads the named session from this service using its license key; clients do not need to copy or configure a long Base64 session string.
 
 ## 🚀 Deployment
 
@@ -35,7 +35,7 @@ Set these in **Render Dashboard → your service → Environment**. Keep the bot
 | `OWNER_CONTACT` | Optional public contact, such as `@yourusername` or a Telegram link, shown by the bot if message forwarding is unavailable. |
 | `SITE_URL` | Optional public URL for the pairing and license website; used in the bot's `/start` message. |
 
-After setting the variables, redeploy the service and open a private chat with `@sneha_auth_bot`. The website is the client portal for requesting a license key, checking a key's status, and contacting the owner. Website key requests are saved in MongoDB and forwarded to the owner for approval; approving a request creates a 30-day key, which the owner sends to the contact supplied by the client. Requests require a working `MONGO_URI`, `TELEGRAM_BOT_TOKEN`, and `OWNER_ID`.
+After setting the variables, redeploy the service and open a private chat with `@sneha_auth_bot`. The website is the client portal for requesting a license key, checking a key's status, and contacting the owner. Website key requests are saved in MongoDB and forwarded to the owner for approval; approving a request creates a 30-day key, which the owner sends to the contact supplied by the client. Requests and named-session storage require a working `MONGO_URI`, `TELEGRAM_BOT_TOKEN`, and `OWNER_ID`.
 
 ### Telegram License Commands
 
@@ -68,12 +68,12 @@ npm install
 # Start the server
 npm start
 ```
-Then, open your web browser and go to `http://localhost:3000`.
+Then, open your web browser and go to `http://localhost:8000`.
 
 ## ⚙️ How it Works
 1. User chooses between scanning a QR code or entering their phone number.
 2. The server initializes a temporary `@whiskeysockets/baileys` socket.
-3. The server either generates a Base64 QR Image or requests an 8-digit Pairing Code.
+3. The server either generates a QR image or requests an 8-digit Pairing Code.
 4. User links their WhatsApp account.
-5. The server encodes `creds.json` into a Base64 Session ID (`XYMBOT~...`).
-6. The server messages the Session ID directly to the user on WhatsApp and cleans up session files.
+5. The server stores the multi-file credentials in MongoDB under the user's unique session name.
+6. Xymbot fetches the credential files from the pairing service using `SESSION_NAME` and `LICENSE_KEY`.

@@ -18,11 +18,6 @@ const LicenseModel = mongoose.models.License || mongoose.model('License', Licens
 export async function verifyLicense(key, sessionId) {
     if (!key) return { valid: false, message: 'No key provided' };
     
-    // Optional Master Key that never expires and ignores locking
-    if (key === 'syam-lifetime-pass') {
-        return { valid: true, type: 'lifetime', message: 'Master key accepted' };
-    }
-
     try {
         const license = await LicenseModel.findOne({ key: key.trim() });
         if (!license) return { valid: false, message: 'Invalid License Key' };

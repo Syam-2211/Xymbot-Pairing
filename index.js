@@ -632,10 +632,7 @@ app.get('/api/verify-license', async (req, res) => {
         res.status(500).json({ valid: false, error: 'Internal server error' });
     }
 });
-
-app.listen(PORT, () => {
+  app.listen(PORT, () => {
     console.log(`🌐 Pairing server live on port ${PORT}`);
-    
-    // Initialize the Telegram License Bot here!
-    initTelegramBot(app);
+    initTelegramBot(app); 
 });

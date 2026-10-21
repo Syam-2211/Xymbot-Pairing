@@ -48,6 +48,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+<<<<<<< HEAD
 // ─── MONGODB INTEGRATION ──────────────────────────────────────────────
 // Make sure to add MONGO_URI in your Render Environment Variables!
 const MONGO_URI = process.env.MONGO_URI;
@@ -81,6 +82,29 @@ async function saveSessionPhrase(phrase, base64Data) {
     }
 }
 
+=======
+// ─── CUSTOM SESSION PHRASE DATABASE HELPERS ─────────────────────────────────
+const SESSIONS_DB_PATH = path.join(__dirname, 'session_phrases.json');
+
+function loadSessionPhrases() {
+    try {
+        if (!fs.existsSync(SESSIONS_DB_PATH)) {
+            fs.writeFileSync(SESSIONS_DB_PATH, JSON.stringify({}, null, 2), 'utf8');
+            return {};
+        }
+        return JSON.parse(fs.readFileSync(SESSIONS_DB_PATH, 'utf8'));
+    } catch (e) {
+        return {};
+    }
+}
+
+function saveSessionPhrase(phrase, base64Data) {
+    const db = loadSessionPhrases();
+    db[phrase.toLowerCase().trim()] = base64Data;
+    fs.writeFileSync(SESSIONS_DB_PATH, JSON.stringify(db, null, 2), 'utf8');
+}
+
+>>>>>>> a6edd02eac02eb368e1ec175d2d476808e5c0ec9
 const activeSessions = {};
 const sessionStates = {};
 
@@ -267,7 +291,11 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
             console.log(`Successfully paired with ${id}! Packaging credentials...`);
             if (sessionStates[id]) {
                 sessionStates[id].status = 'linking';
+<<<<<<< HEAD
                 sessionStates[id].message = 'Pairing verified! Saving session to database...';
+=======
+                sessionStates[id].message = 'Pairing verified! Saving session...';
+>>>>>>> a6edd02eac02eb368e1ec175d2d476808e5c0ec9
                 sessionStates[id].lastUpdated = Date.now();
             }
 
@@ -295,10 +323,16 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
                     
                     // Fallback to xym-sneha-bot if the custom phrase is missing or fails
                     const finalPhrase = customPhrase || 'xym-sneha-bot';
+<<<<<<< HEAD
                     
                     // Save to MongoDB
                     await saveSessionPhrase(finalPhrase, base64Session);
 
+=======
+                    saveSessionPhrase(finalPhrase, base64Session);
+
+                    // Output the final custom phrase to the UI and WhatsApp
+>>>>>>> a6edd02eac02eb368e1ec175d2d476808e5c0ec9
                     const sessionId = finalPhrase;
 
                     if (sessionStates[id]) {
@@ -342,6 +376,7 @@ async function startAuth(id, type, onReady = null, isReconnect = false, customPh
     });
 }
 
+<<<<<<< HEAD
 // ─── FETCH FROM MONGODB ───────────────────────────────────────────────
 app.get('/api/get-session', async (req, res) => {
     const phrase = req.query.phrase;
@@ -357,6 +392,20 @@ app.get('/api/get-session', async (req, res) => {
         console.error('DB Fetch Error:', e);
         res.status(500).json({ error: 'Database query failed' });
     }
+=======
+app.get('/api/get-session', (req, res) => {
+    const phrase = req.query.phrase;
+    if (!phrase) return res.status(400).json({ error: 'Phrase parameter missing' });
+    
+    const db = loadSessionPhrases();
+    const sessionData = db[phrase.toLowerCase().trim()];
+
+    if (!sessionData) {
+        return res.status(404).json({ error: 'Session phrase not found or expired' });
+    }
+
+    res.json({ success: true, sessionData });
+>>>>>>> a6edd02eac02eb368e1ec175d2d476808e5c0ec9
 });
 
 app.get('/pair', async (req, res) => {
@@ -365,6 +414,10 @@ app.get('/pair', async (req, res) => {
 
     if (!phone) return res.json({ error: 'Please provide a phone number.' });
     
+<<<<<<< HEAD
+=======
+    // Default to xym-sneha-bot if nothing is typed
+>>>>>>> a6edd02eac02eb368e1ec175d2d476808e5c0ec9
     if (!customPhrase || customPhrase.trim() === '') {
         customPhrase = 'xym-sneha-bot';
     }
@@ -403,6 +456,10 @@ app.get('/pair', async (req, res) => {
 app.get('/qr', async (req, res) => {
     let customPhrase = req.query.custom;
     
+<<<<<<< HEAD
+=======
+    // Default to xym-sneha-bot if nothing is typed
+>>>>>>> a6edd02eac02eb368e1ec175d2d476808e5c0ec9
     if (!customPhrase || customPhrase.trim() === '') {
         customPhrase = 'xym-sneha-bot';
     }

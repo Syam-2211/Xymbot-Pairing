@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xymbot Session Pairing</title>
+    <meta name="description" content="Connect your WhatsApp to Xymbot using an 8-digit pairing code. No QR scan needed.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -20,11 +21,7 @@
             --text-muted: #94a3b8;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -47,7 +44,7 @@
             -webkit-backdrop-filter: blur(20px);
             border-radius: 24px;
             padding: 36px 30px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 229, 255, 0.08);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 40px rgba(0,229,255,0.08);
             position: relative;
             overflow: hidden;
         }
@@ -55,19 +52,14 @@
         .container::before {
             content: '';
             position: absolute;
-            top: -100px;
-            left: 50%;
+            top: -100px; left: 50%;
             transform: translateX(-50%);
-            width: 250px;
-            height: 250px;
-            background: radial-gradient(circle, rgba(0, 229, 255, 0.15) 0%, transparent 70%);
+            width: 250px; height: 250px;
+            background: radial-gradient(circle, rgba(0,229,255,0.15) 0%, transparent 70%);
             pointer-events: none;
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 28px;
-        }
+        .header { text-align: center; margin-bottom: 28px; }
 
         .badge-logo {
             display: inline-flex;
@@ -75,10 +67,9 @@
             gap: 8px;
             padding: 6px 14px;
             border-radius: 99px;
-            background: rgba(0, 229, 255, 0.08);
-            border: 1px solid rgba(0, 229, 255, 0.25);
-            font-size: 12px;
-            font-weight: 700;
+            background: rgba(0,229,255,0.08);
+            border: 1px solid rgba(0,229,255,0.25);
+            font-size: 12px; font-weight: 700;
             color: var(--accent-cyan);
             letter-spacing: 0.5px;
             text-transform: uppercase;
@@ -86,78 +77,28 @@
         }
 
         h1 {
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
+            font-size: 28px; font-weight: 800; letter-spacing: -0.5px;
             background: linear-gradient(135deg, #ffffff 30%, #7dd3fc 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 8px;
         }
 
-        .subtitle {
-            font-size: 14px;
-            color: var(--text-muted);
-            line-height: 1.5;
-        }
+        .subtitle { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
 
-        .tabs {
-            display: flex;
-            background: rgba(10, 14, 29, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 14px;
-            padding: 4px;
-            margin-bottom: 24px;
-            gap: 4px;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 10px 14px;
-            border: none;
-            background: transparent;
-            color: var(--text-muted);
-            font-size: 13px;
-            font-weight: 600;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .tab-btn.active {
-            background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(61, 126, 255, 0.25));
-            color: #fff;
-            border: 1px solid rgba(0, 229, 255, 0.3);
-            box-shadow: 0 4px 12px rgba(0, 229, 255, 0.15);
-        }
-
-        .input-group {
-            margin-bottom: 18px;
-            position: relative;
-        }
+        .input-group { margin-bottom: 18px; }
 
         .input-group label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-            text-align: left;
+            display: block; font-size: 12px; font-weight: 600;
+            color: var(--text-muted); margin-bottom: 8px; text-align: left;
         }
 
         input {
-            width: 100%;
-            padding: 14px 16px;
-            background: rgba(10, 14, 29, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 12px;
-            color: #fff;
-            font-size: 15px;
-            font-weight: 500;
+            width: 100%; padding: 14px 16px;
+            background: rgba(10,14,29,0.8);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px; color: #fff;
+            font-size: 15px; font-weight: 500;
             outline: none;
             transition: border-color 0.2s, box-shadow 0.2s;
             font-family: inherit;
@@ -165,232 +106,162 @@
 
         input:focus {
             border-color: var(--accent-cyan);
-            box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.15);
+            box-shadow: 0 0 0 3px rgba(0,229,255,0.15);
         }
 
         .btn-primary {
-            width: 100%;
-            padding: 14px 20px;
+            width: 100%; padding: 14px 20px;
             background: linear-gradient(135deg, #00d2ff, #3a7bd5);
-            border: none;
-            border-radius: 12px;
-            color: #fff;
-            font-size: 15px;
-            font-weight: 700;
+            border: none; border-radius: 12px;
+            color: #fff; font-size: 15px; font-weight: 700;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
             transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
-            box-shadow: 0 8px 24px rgba(0, 210, 255, 0.3);
+            box-shadow: 0 8px 24px rgba(0,210,255,0.3);
         }
 
         .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 10px 28px rgba(0, 210, 255, 0.45);
+            box-shadow: 0 10px 28px rgba(0,210,255,0.45);
         }
 
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
         .btn-secondary {
-            width: 100%;
-            padding: 12px 18px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 12px;
-            color: var(--text-main);
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
+            width: 100%; padding: 12px 18px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px; color: var(--text-main);
+            font-size: 14px; font-weight: 600; cursor: pointer;
             transition: background 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
         }
 
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.12);
+        .btn-secondary:hover { background: rgba(255,255,255,0.12); }
+
+        /* ── How to pair steps ── */
+        .steps-box {
+            background: rgba(0,229,255,0.04);
+            border: 1px solid rgba(0,229,255,0.12);
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.7;
         }
 
-        /* Displays */
-        #display-section {
-            margin-top: 24px;
-            display: none;
-            text-align: center;
-        }
+        .steps-box strong { color: #fff; }
+        .steps-box ol { padding-left: 16px; }
+        .steps-box li { margin-bottom: 4px; }
+
+        /* ── Display Section ── */
+        #display-section { margin-top: 24px; display: none; text-align: center; }
 
         .status-box {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 12px 16px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 20px;
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px; padding: 12px 16px; border-radius: 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            font-size: 13px; font-weight: 600; margin-bottom: 20px;
         }
 
         .spinner {
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(0, 229, 255, 0.2);
+            width: 18px; height: 18px;
+            border: 2px solid rgba(0,229,255,0.2);
             border-top-color: var(--accent-cyan);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .qr-card {
-            background: #fff;
-            padding: 14px;
-            border-radius: 18px;
-            display: inline-block;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 25px rgba(0, 229, 255, 0.25);
-            margin-bottom: 14px;
-        }
-
-        #qr-image {
-            width: 220px;
-            height: 220px;
-            display: block;
-            border-radius: 8px;
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         .code-box {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px dashed rgba(0, 229, 255, 0.4);
+            background: rgba(0,0,0,0.4);
+            border: 1px dashed rgba(0,229,255,0.4);
             border-radius: 16px;
             padding: 20px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 32px;
-            font-weight: 700;
-            letter-spacing: 4px;
+            font-size: 32px; font-weight: 700;
+            letter-spacing: 6px;
             color: var(--accent-cyan);
             margin-bottom: 12px;
-            text-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+            text-shadow: 0 0 15px rgba(0,229,255,0.4);
+            animation: glow 2s ease-in-out infinite alternate;
         }
 
-        .hint-text {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
+        @keyframes glow {
+            from { text-shadow: 0 0 8px rgba(0,229,255,0.3); }
+            to   { text-shadow: 0 0 22px rgba(0,229,255,0.7); }
         }
 
-        /* Success Card */
-        #success-section {
-            display: none;
-            text-align: center;
-        }
+        .hint-text { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+
+        /* ── Success Section ── */
+        #success-section { display: none; text-align: center; }
 
         .success-icon-wrap {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: rgba(0, 240, 144, 0.12);
-            border: 2px solid rgba(0, 240, 144, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 30px;
-            margin: 0 auto 16px auto;
+            width: 64px; height: 64px; border-radius: 50%;
+            background: rgba(0,240,144,0.12);
+            border: 2px solid rgba(0,240,144,0.3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px; margin: 0 auto 16px auto;
             color: var(--accent-green);
-            box-shadow: 0 0 30px rgba(0, 240, 144, 0.25);
+            box-shadow: 0 0 30px rgba(0,240,144,0.25);
         }
 
         .session-code-container {
-            background: rgba(10, 14, 29, 0.9);
-            border: 1px solid rgba(0, 229, 255, 0.25);
-            border-radius: 14px;
-            padding: 16px;
-            margin: 18px 0;
-            text-align: left;
-            position: relative;
+            background: rgba(10,14,29,0.9);
+            border: 1px solid rgba(0,229,255,0.25);
+            border-radius: 14px; padding: 16px;
+            margin: 18px 0; text-align: left; position: relative;
         }
 
         .session-code-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 10px;
         }
 
         .session-code-label {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: var(--accent-cyan);
-            letter-spacing: 0.5px;
+            font-size: 11px; font-weight: 700; text-transform: uppercase;
+            color: var(--accent-cyan); letter-spacing: 0.5px;
         }
 
         .session-code-text {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            color: #e2e8f0;
+            font-size: 12px; color: #e2e8f0;
             word-break: break-all;
-            max-height: 110px;
-            overflow-y: auto;
-            line-height: 1.4;
-            padding-right: 4px;
+            max-height: 110px; overflow-y: auto;
+            line-height: 1.4; padding-right: 4px;
         }
 
-        .session-code-text::-webkit-scrollbar {
-            width: 4px;
-        }
+        .session-code-text::-webkit-scrollbar { width: 4px; }
         .session-code-text::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
+            background: rgba(255,255,255,0.2); border-radius: 4px;
         }
 
         .instructions-list {
             text-align: left;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 14px;
-            padding: 16px;
-            margin-bottom: 20px;
-            font-size: 12px;
-            color: var(--text-muted);
-            line-height: 1.6;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px; padding: 16px; margin-bottom: 20px;
+            font-size: 12px; color: var(--text-muted); line-height: 1.6;
         }
 
-        .instructions-list strong {
-            color: #fff;
-        }
-
-        .instructions-list ol {
-            padding-left: 18px;
-        }
-
-        .instructions-list li {
-            margin-bottom: 6px;
-        }
+        .instructions-list strong { color: #fff; }
+        .instructions-list ol { padding-left: 18px; }
+        .instructions-list li { margin-bottom: 6px; }
 
         .instructions-list code {
             font-family: 'JetBrains Mono', monospace;
             color: var(--accent-cyan);
-            background: rgba(0, 229, 255, 0.08);
-            padding: 2px 5px;
-            border-radius: 4px;
-            font-size: 11px;
+            background: rgba(0,229,255,0.08);
+            padding: 2px 5px; border-radius: 4px; font-size: 11px;
         }
 
         .footer {
-            margin-top: 24px;
-            text-align: center;
-            font-size: 11px;
-            color: rgba(148, 163, 184, 0.6);
+            margin-top: 24px; text-align: center;
+            font-size: 11px; color: rgba(148,163,184,0.6);
         }
     </style>
 </head>
@@ -399,39 +270,28 @@
         <div class="header">
             <div class="badge-logo">⚡ Xymbot Cloud</div>
             <h1>Session Pairing</h1>
-            <p class="subtitle">Connect your WhatsApp to generate your bot's Base64 Session credentials.</p>
+            <p class="subtitle">Enter your WhatsApp number to receive an 8-digit pairing code and generate your bot's Session ID.</p>
         </div>
 
+        <!-- Setup Section -->
         <div id="setup-section">
-            <div class="tabs">
-                <button class="tab-btn active" id="tab-code-btn" onclick="setMode('code')">
-                    <span>🔢</span> Pairing Code
-                </button>
-                <button class="tab-btn" id="tab-qr-btn" onclick="setMode('qr')">
-                    <span>📷</span> QR Code
-                </button>
+            <div class="steps-box">
+                <strong>📋 How to pair:</strong>
+                <ol>
+                    <li>Enter your WhatsApp number below (with country code)</li>
+                    <li>Click <strong>Request Pairing Code</strong></li>
+                    <li>Open WhatsApp → <strong>Linked Devices</strong> → <strong>Link with phone number</strong></li>
+                    <li>Enter the 8-digit code shown here</li>
+                </ol>
             </div>
 
-            <!-- Pairing Code Input -->
-            <div id="mode-code-box">
-                <div class="input-group">
-                    <label for="phone-input">WhatsApp Phone Number (with Country Code)</label>
-                    <input type="tel" id="phone-input" placeholder="e.g. 919876543210" autocomplete="tel">
-                </div>
-                <button class="btn-primary" id="btn-get-code" onclick="requestCode()">
-                    <span>Request 8-Digit Code</span>
-                </button>
+            <div class="input-group">
+                <label for="phone-input">WhatsApp Number (with Country Code)</label>
+                <input type="tel" id="phone-input" placeholder="e.g. 919876543210" autocomplete="tel">
             </div>
-
-            <!-- QR Code Button -->
-            <div id="mode-qr-box" style="display: none;">
-                <p class="hint-text" style="margin-bottom: 16px;">
-                    Click below to generate a fresh QR code. Scan it from WhatsApp &gt; Linked Devices.
-                </p>
-                <button class="btn-primary" id="btn-get-qr" onclick="requestQR()">
-                    <span>Generate QR Code</span>
-                </button>
-            </div>
+            <button class="btn-primary" id="btn-get-code" onclick="requestCode()">
+                <span>🔑</span> Request 8-Digit Pairing Code
+            </button>
         </div>
 
         <!-- Real-Time Pairing Display -->
@@ -441,54 +301,42 @@
                 <span id="status-msg">Connecting to WhatsApp...</span>
             </div>
 
-            <!-- Code display -->
-            <div id="code-view" style="display: none;">
+            <div id="code-view" style="display:none;">
                 <div class="code-box" id="code-digits">----</div>
                 <p class="hint-text">
-                    Open WhatsApp &gt; <strong>Linked Devices</strong> &gt; <strong>Link with phone number instead</strong> and enter this code.
+                    Open WhatsApp → <strong>Linked Devices</strong> → <strong>Link with phone number</strong> and enter this code.
                 </p>
             </div>
 
-            <!-- QR display -->
-            <div id="qr-view" style="display: none;">
-                <div class="qr-card">
-                    <img id="qr-image" src="" alt="WhatsApp QR Code">
-                </div>
-                <p class="hint-text">
-                    Open WhatsApp &gt; <strong>Linked Devices</strong> &gt; <strong>Link a Device</strong> and point your camera here.
-                </p>
-            </div>
-
-            <button class="btn-secondary" style="margin-top: 14px;" onclick="cancelPairing()">
-                ✕ Cancel & Try Again
+            <button class="btn-secondary" style="margin-top:14px;" onclick="cancelPairing()">
+                ✕ Cancel &amp; Try Again
             </button>
         </div>
 
         <!-- Success Section -->
         <div id="success-section">
             <div class="success-icon-wrap">✓</div>
-            <h2 style="font-size: 22px; margin-bottom: 6px; color: #fff;">Pairing Successful!</h2>
-            <p class="subtitle" style="margin-bottom: 16px;">Your WhatsApp session has been provisioned and is ready.</p>
+            <h2 style="font-size:22px; margin-bottom:6px; color:#fff;">Pairing Successful!</h2>
+            <p class="subtitle" style="margin-bottom:16px;">Your WhatsApp session has been provisioned and is ready to use.</p>
 
             <div class="session-code-container">
                 <div class="session-code-header">
                     <span class="session-code-label">Session ID</span>
-                    <button id="copy-btn" class="btn-secondary" style="padding: 4px 10px; font-size: 11px; width: auto;" onclick="copySessionId()">
-                        📋 Copy Code
+                    <button id="copy-btn" class="btn-secondary" style="padding:4px 10px; font-size:11px; width:auto;" onclick="copySessionId()">
+                        📋 Copy
                     </button>
                 </div>
                 <div class="session-code-text" id="session-id-display"></div>
             </div>
 
             <div class="instructions-list">
-                <div style="font-weight: 700; color: #fff; margin-bottom: 8px;">🚀 Next Steps for Xymbot:</div>
+                <div style="font-weight:700; color:#fff; margin-bottom:8px;">🚀 Next Steps for Xymbot on Render:</div>
                 <ol>
                     <li>Copy your <strong>Session ID</strong> above.</li>
-                    <li>Open <code>config.js</code> in Xymbot and set:<br>
-                        <code>global.SESSION_ID = "YOUR_SESSION_ID";</code>
-                    </li>
-                    <li>Or set environment variable <code>SESSION_ID</code> in Render / Railway / .env</li>
-                    <li>Run <code>npm start</code> or <code>node index.js</code>. Your bot is ready!</li>
+                    <li>Go to your Render dashboard → <strong>Environment</strong>.</li>
+                    <li>Set <code>SESSION_ID</code> = your copied Session ID.</li>
+                    <li>Set <code>LICENSE_KEY</code> = your license key.</li>
+                    <li>Click <strong>Save Changes</strong> → Render will redeploy automatically.</li>
                 </ol>
             </div>
 
@@ -503,41 +351,30 @@
     </div>
 
     <script>
-        let currentMode = 'code';
         let activeSessionId = null;
         let pollTimer = null;
         let currentRawSessionId = '';
 
-        function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('tab-code-btn').classList.toggle('active', mode === 'code');
-            document.getElementById('tab-qr-btn').classList.toggle('active', mode === 'qr');
-            document.getElementById('mode-code-box').style.display = (mode === 'code') ? 'block' : 'none';
-            document.getElementById('mode-qr-box').style.display = (mode === 'qr') ? 'block' : 'none';
-        }
-
         function setStatus(msg, isError = false, showSpinner = true) {
             const statusCard = document.getElementById('status-card');
-            const statusMsg = document.getElementById('status-msg');
-            const spinner = document.getElementById('status-spinner');
-
+            const statusMsg  = document.getElementById('status-msg');
+            const spinner    = document.getElementById('status-spinner');
             statusMsg.innerText = msg;
             spinner.style.display = showSpinner ? 'block' : 'none';
-
             if (isError) {
-                statusCard.style.borderColor = 'rgba(255, 71, 87, 0.4)';
+                statusCard.style.borderColor = 'rgba(255,71,87,0.4)';
                 statusCard.style.color = '#ff6b81';
             } else {
-                statusCard.style.borderColor = 'rgba(0, 229, 255, 0.25)';
+                statusCard.style.borderColor = 'rgba(0,229,255,0.25)';
                 statusCard.style.color = '#f1f5f9';
             }
         }
 
         async function requestCode() {
-            const phoneInput = document.getElementById('phone-input').value.trim();
+            const phoneInput = document.getElementById('phone-input').value.trim().replace(/[^0-9]/g, '');
             const btn = document.getElementById('btn-get-code');
 
-            if (!phoneInput) {
+            if (!phoneInput || phoneInput.length < 8) {
                 alert('Please enter your full phone number including country code (e.g. 919876543210)');
                 return;
             }
@@ -546,7 +383,6 @@
             document.getElementById('setup-section').style.display = 'none';
             document.getElementById('display-section').style.display = 'block';
             document.getElementById('code-view').style.display = 'none';
-            document.getElementById('qr-view').style.display = 'none';
             setStatus('Requesting 8-digit Pairing Code from WhatsApp...');
 
             try {
@@ -556,94 +392,54 @@
                 if (data.error) {
                     setStatus('❌ ' + data.error, true, false);
                     btn.disabled = false;
+                    setTimeout(() => {
+                        document.getElementById('display-section').style.display = 'none';
+                        document.getElementById('setup-section').style.display = 'block';
+                    }, 3000);
                     return;
                 }
 
                 if (data.code) {
-                    activeSessionId = phoneInput.replace(/[^0-9]/g, '');
+                    activeSessionId = phoneInput;
                     document.getElementById('code-digits').innerText = data.code;
                     document.getElementById('code-view').style.display = 'block';
-                    setStatus('Waiting for you to enter code in WhatsApp...', false, true);
-
-                    // Start real-time polling
+                    setStatus('⏳ Waiting for you to enter the code in WhatsApp...', false, true);
                     startStatusPolling(activeSessionId);
                 }
             } catch (err) {
                 setStatus('❌ Server connection error. Please try again.', true, false);
                 btn.disabled = false;
-            }
-        }
-
-        async function requestQR() {
-            const btn = document.getElementById('btn-get-qr');
-
-            btn.disabled = true;
-            document.getElementById('setup-section').style.display = 'none';
-            document.getElementById('display-section').style.display = 'block';
-            document.getElementById('code-view').style.display = 'none';
-            document.getElementById('qr-view').style.display = 'none';
-            setStatus('Generating QR Code with WhatsApp servers...');
-
-            try {
-                const response = await fetch('/qr');
-                const data = await response.json();
-
-                if (data.error) {
-                    setStatus('❌ ' + data.error, true, false);
-                    btn.disabled = false;
-                    return;
-                }
-
-                if (data.qr && data.id) {
-                    activeSessionId = data.id;
-                    const qrImg = document.getElementById('qr-image');
-                    qrImg.src = data.qr;
-                    document.getElementById('qr-view').style.display = 'block';
-                    setStatus('Scan this QR code with WhatsApp...', false, true);
-
-                    // Start real-time polling
-                    startStatusPolling(activeSessionId);
-                }
-            } catch (err) {
-                setStatus('❌ Server connection error. Please try again.', true, false);
-                btn.disabled = false;
+                setTimeout(() => {
+                    document.getElementById('display-section').style.display = 'none';
+                    document.getElementById('setup-section').style.display = 'block';
+                }, 3000);
             }
         }
 
         function startStatusPolling(id) {
             if (pollTimer) clearInterval(pollTimer);
-
             pollTimer = setInterval(async () => {
-                if (!activeSessionId) {
-                    clearInterval(pollTimer);
-                    return;
-                }
-
+                if (!activeSessionId) { clearInterval(pollTimer); return; }
                 try {
-                    const res = await fetch(`/status?id=${encodeURIComponent(id)}`);
+                    const res  = await fetch(`/status?id=${encodeURIComponent(id)}`);
                     const data = await res.json();
-
-                    if (!data || data.status === 'not_found') {
-                        return; // continue waiting
-                    }
+                    if (!data || data.status === 'not_found') return;
 
                     if (data.status === 'linking') {
-                        setStatus(data.message || 'Device detected! Linking WhatsApp account...', false, true);
-                    } else if (data.status === 'waiting') {
-                        // If QR code refreshed dynamically
-                        if (data.qr && document.getElementById('qr-image').src !== data.qr) {
-                            document.getElementById('qr-image').src = data.qr;
-                        }
+                        setStatus(data.message || 'Device detected! Finalizing encryption & session...', false, true);
                     } else if (data.status === 'connected') {
                         clearInterval(pollTimer);
                         showSuccess(data.sessionId);
                     } else if (data.status === 'error') {
                         clearInterval(pollTimer);
                         setStatus('❌ ' + (data.error || 'Connection failed.'), true, false);
+                        document.getElementById('btn-get-code').disabled = false;
+                        setTimeout(() => {
+                            document.getElementById('display-section').style.display = 'none';
+                            document.getElementById('setup-section').style.display = 'block';
+                        }, 4000);
                     }
-                } catch (e) {
-                    // Ignore transient network blips
-                }
+                } catch (e) { /* ignore transient errors */ }
             }, 1500);
         }
 
@@ -657,19 +453,18 @@
 
         function copySessionId() {
             if (!currentRawSessionId) return;
-
             navigator.clipboard.writeText(currentRawSessionId).then(() => {
                 const btn = document.getElementById('copy-btn');
                 btn.innerText = '✅ Copied!';
-                btn.style.background = 'rgba(0, 240, 144, 0.2)';
-                btn.style.borderColor = 'rgba(0, 240, 144, 0.4)';
+                btn.style.background = 'rgba(0,240,144,0.2)';
+                btn.style.borderColor = 'rgba(0,240,144,0.4)';
                 setTimeout(() => {
-                    btn.innerText = '📋 Copy Code';
+                    btn.innerText = '📋 Copy';
                     btn.style.background = '';
                     btn.style.borderColor = '';
                 }, 3000);
             }).catch(() => {
-                alert('Could not copy automatically. Please select the text manually.');
+                alert('Could not copy automatically. Please select and copy the text manually.');
             });
         }
 
@@ -683,13 +478,17 @@
             if (pollTimer) clearInterval(pollTimer);
             activeSessionId = null;
             currentRawSessionId = '';
-
             document.getElementById('btn-get-code').disabled = false;
-            document.getElementById('btn-get-qr').disabled = false;
+            document.getElementById('phone-input').value = '';
             document.getElementById('setup-section').style.display = 'block';
             document.getElementById('display-section').style.display = 'none';
             document.getElementById('success-section').style.display = 'none';
         }
+
+        // Allow Enter key to submit
+        document.getElementById('phone-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') requestCode();
+        });
     </script>
 </body>
 </html>

@@ -7,4 +7,14 @@ services:
     startCommand: npm start
     envVars:
       - key: NODE_VERSION
-        value: 20
+        value: "20"
+      - key: VALID_KEYS
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_ADMIN_ID
+        sync: false
+      - key: OWNER_TELEGRAM
+        sync: false
+      - key: OWNER_CONTACT
+        sync: false

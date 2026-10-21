@@ -52,7 +52,7 @@ export async function verifyLicense(key, sessionId) {
     }
 }
 
-// 3. Telegram Bot Admin Panel
+// 3. Telegram Bot Admin Panel & Commands
 export function initTelegramBot(app) {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) {
@@ -67,6 +67,21 @@ export function initTelegramBot(app) {
         const p2 = crypto.randomBytes(2).toString('hex').toUpperCase();
         return `XYM-${p1}-${p2}`;
     };
+
+    // /start command greeting
+    bot.onText(/\/start/, (msg) => {
+        const chatId = msg.chat.id;
+        const welcomeMessage = 
+`🤖 *Welcome to Sneha Auth Bot!*
+
+Use the commands below to manage your licenses:
+• \`/check <key>\` - Check license status
+• \`/gen <days>\` - Generate a new key _(Admin)_
+• \`/gen life\` - Generate a lifetime key _(Admin)_
+• \`/reset <key>\` - Revoke and unbind a key _(Admin)_`;
+
+        bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
+    });
 
     // /gen 30 (Creates a 30-day key)
     bot.onText(/\/(gen|generate) (\d+)/, async (msg, match) => {
@@ -115,7 +130,7 @@ export function initTelegramBot(app) {
         }
     });
 
-    // /check XYM-ABCD-1234 (Check status and who is using the key)
+    // /check XYM-ABCD-1234 (Check status in your custom requested layout)
     bot.onText(/\/check (.+)/, async (msg, match) => {
         const chatId = msg.chat.id;
         const key = match[1].trim();
@@ -124,13 +139,19 @@ export function initTelegramBot(app) {
             const license = await LicenseModel.findOne({ key });
             if (!license) return bot.sendMessage(chatId, '❌ Key not found.');
 
-            let status = `🔑 *Key:* \`${license.key}\`\n`;
-            status += `⏳ *Duration:* ${license.durationDays === 9999 ? 'Lifetime' : license.durationDays + ' Days'}\n`;
-            status += `🟢 *Activated:* ${license.isActivated ? 'Yes' : 'No'}\n`;
-            if (license.boundSession) status += `📱 *Bound to Bot:* \`${license.boundSession}\`\n`;
-            if (license.expiresAt) status += `📅 *Expires:* ${license.expiresAt.toDateString()}\n`;
+            const validityText = license.durationDays >= 9999 ? 'Lifetime (Never Expires)' : `${license.durationDays} Days`;
+            const statusText = license.isActivated ? '✅ Active' : '🟢 Inactive (Unused)';
+            const ownerText = license.boundSession ? license.boundSession : 'Not Bound Yet';
 
-            bot.sendMessage(chatId, status, { parse_mode: 'Markdown' });
+            const responseMessage = 
+`🔍 Your License Status
+
+🔑 Key: \`${license.key}\`
+📊 Status: ${statusText}
+♾️ Validity: ${validityText}
+👤 Owner: \`${ownerText}\``;
+
+            bot.sendMessage(chatId, responseMessage, { parse_mode: 'Markdown' });
         } catch (err) {
             bot.sendMessage(chatId, '❌ Failed to check key.');
         }

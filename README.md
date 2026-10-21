@@ -20,7 +20,37 @@ You can deploy this pairing site for free on services like Render, Koyeb, or Rai
 3. Connect your repository.
 4. Set the **Build Command** to: `npm install`
 5. Set the **Start Command** to: `npm start`
-6. Click **Deploy Web Service**!
+6. In **Environment**, add the variables listed below.
+7. Click **Deploy Web Service**.
+
+### Render Environment Variables
+
+Set these in **Render Dashboard → your service → Environment**. Keep the bot token and MongoDB URI private.
+
+| Variable | Value |
+|---|---|
+| `MONGO_URI` | MongoDB connection URI for your database. Ensure your MongoDB network access settings allow the Render service to connect. |
+| `TELEGRAM_BOT_TOKEN` | Token for your Telegram bot, created with `@BotFather`. |
+| `OWNER_ID` | Your numeric Telegram user ID. Owner commands only work for this account in a private chat with the bot. |
+| `OWNER_CONTACT` | Optional public contact, such as `@yourusername` or a Telegram link, shown if bot message forwarding is unavailable. |
+
+After setting the variables, redeploy the service and open a private chat with your bot. Send `/start` to see the commands available to you. If `OWNER_ID` or `MONGO_URI` is missing or invalid, owner controls or license requests will not work.
+
+### Telegram License Commands
+
+Only the configured owner can manage the key store, and owner commands are restricted to a private chat with the bot.
+
+Owner commands:
+- `/gen 30` creates a 30-day key; `/gen life` creates a lifetime key.
+- `/keys` lists the latest 20 keys; `/check <key>` shows full status and bound session.
+- `/reset <key>` unbinds a key; `/remove <key>` permanently deletes one key.
+- `/killall CONFIRM` permanently deletes every license key.
+- `/stats` shows license totals; `/requests` lists pending client requests.
+- `/approve <request-id> <days|life>` issues a key and sends it to that client; `/deny <request-id>` rejects the request.
+
+Client commands:
+- `/getkey` sends a license request to the owner. The owner must approve it before a key is issued.
+- `/check <key>` checks a license; `/contact <message>` forwards a private message to the owner.
 
 ## 💻 Local Testing
 If you want to test the server on your own computer:

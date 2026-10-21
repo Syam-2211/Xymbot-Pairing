@@ -14,6 +14,16 @@ const LicenseSchema = new mongoose.Schema({
 
 const LicenseModel = mongoose.models.License || mongoose.model('License', LicenseSchema);
 
+const LicenseRequestSchema = new mongoose.Schema({
+    requesterId: { type: String, required: true },
+    requesterName: { type: String, default: '' },
+    username: { type: String, default: '' },
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const LicenseRequest = mongoose.models.LicenseRequest || mongoose.model('LicenseRequest', LicenseRequestSchema);
+
 // 2. License Verification Function
 export async function verifyLicense(key, sessionId) {
     if (!key) return { valid: false, message: 'No key provided' };
@@ -52,7 +62,7 @@ export async function verifyLicense(key, sessionId) {
     }
 }
 
-// 3. Telegram Bot Admin Panel & Commands
+// Telegram license management commands
 export function initTelegramBot(app) {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) {
@@ -60,103 +70,315 @@ export function initTelegramBot(app) {
         return;
     }
 
+    const ownerId = process.env.OWNER_ID?.trim();
+    if (!ownerId) {
+        console.warn('⚠️ OWNER_ID is missing. Owner commands are disabled.');
+    }
+
     const bot = new TelegramBot(token, { polling: true });
 
     const generateKey = () => {
-        const p1 = crypto.randomBytes(2).toString('hex').toUpperCase();
-        const p2 = crypto.randomBytes(2).toString('hex').toUpperCase();
+        const p1 = crypto.randomBytes(4).toString('hex').toUpperCase();
+        const p2 = crypto.randomBytes(4).toString('hex').toUpperCase();
         return `XYM-${p1}-${p2}`;
     };
 
-    // /start command greeting
-    bot.onText(/\/start/, (msg) => {
-        const chatId = msg.chat.id;
-        const welcomeMessage = 
-`🤖 *Welcome to Sneha Auth Bot!*
+    const isOwner = (msg) => Boolean(
+        ownerId &&
+        msg.chat.type === 'private' &&
+        String(msg.from?.id) === ownerId &&
+        String(msg.chat.id) === ownerId
+    );
+    const requireOwner = async (msg) => {
+        if (isOwner(msg)) return true;
+        if (msg.chat.type === 'private') {
+            await bot.sendMessage(msg.chat.id, ownerId ? '⛔ This command is for the bot owner only.' : '⛔ Owner commands are not configured.');
+        }
+        return false;
+    };
+    const requireDatabase = async (chatId) => {
+        if (mongoose.connection.readyState === 1) return true;
+        await bot.sendMessage(chatId, '❌ MongoDB is not connected. Check the MONGO_URI setting and try again.');
+        return false;
+    };
+    const durationLabel = (days) => days >= 9999 ? 'Lifetime' : `${days} days`;
+    const licenseStatus = (license) => {
+        if (license.expiresAt && license.expiresAt < new Date()) return 'Expired';
+        return license.isActivated ? 'Active' : 'Unused';
+    };
 
-Use the commands below to manage your licenses:
-• \`/check <key>\` - Check license status
-• \`/gen <days>\` - Generate a new key _(Admin)_
-• \`/gen life\` - Generate a lifetime key _(Admin)_
-• \`/reset <key>\` - Revoke and unbind a key _(Admin)_`;
-
-        bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
+    bot.on('polling_error', (error) => {
+        console.error('Telegram polling error:', error.message);
     });
 
-    // /gen 30 (Creates a 30-day key)
-    bot.onText(/\/(gen|generate) (\d+)/, async (msg, match) => {
-        const chatId = msg.chat.id;
-        const days = parseInt(match[2]);
-        const key = generateKey();
+    bot.onText(/^\/start(?:@\w+)?(?:\s.*)?$/i, (msg) => {
+        const ownerCommands = `Owner commands (private chat only):
+/gen <days|life> - Create a license
+/keys - List the latest 20 keys
+/check <key> - Full license details
+/reset <key> - Unbind a key
+/remove <key> - Delete one key
+/killall CONFIRM - Delete every key
+/stats - License totals
+/requests - Show client requests
+/approve <request-id> <days|life> - Issue a requested key
+/deny <request-id> - Reject a request`;
+        const clientCommands = `Client commands:
+/getkey - Request a license from the owner
+/check <key> - Check your key status
+/contact <message> - Message the owner`;
+        bot.sendMessage(msg.chat.id, isOwner(msg) ? ownerCommands : clientCommands);
+    });
+
+    bot.onText(/^\/gen(?:@\w+)?\s+(life|\d+)$/i, async (msg, match) => {
+        if (!await requireOwner(msg)) return;
+        if (!await requireDatabase(msg.chat.id)) return;
+
+        const lifetime = match[1].toLowerCase() === 'life';
+        const days = lifetime ? 9999 : Number(match[1]);
+        if (!lifetime && (!Number.isInteger(days) || days < 1 || days > 9998)) {
+            return bot.sendMessage(msg.chat.id, '❌ Choose a duration from 1 to 9998 days, or use /gen life.');
+        }
 
         try {
+            const key = generateKey();
             await LicenseModel.create({ key, durationDays: days });
-            bot.sendMessage(chatId, `✅ *New License Generated!*\n\n🔑 \`${key}\`\n⏳ Duration: ${days} Days\n\n_Send this key to your client._`, { parse_mode: 'Markdown' });
-        } catch (err) {
-            bot.sendMessage(chatId, '❌ Failed to save key to MongoDB.');
+            await bot.sendMessage(msg.chat.id, `✅ License created\nKey: ${key}\nDuration: ${durationLabel(days)}`);
+        } catch (error) {
+            console.error('License generation failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not create the license. Check the server logs.');
         }
     });
 
-    // /gen life (Creates a lifetime key)
-    bot.onText(/\/(gen|generate) life/, async (msg) => {
-        const chatId = msg.chat.id;
-        const key = generateKey();
+    bot.onText(/^\/keys(?:@\w+)?$/i, async (msg) => {
+        if (!await requireOwner(msg)) return;
+        if (!await requireDatabase(msg.chat.id)) return;
 
         try {
-            await LicenseModel.create({ key, durationDays: 9999 }); 
-            bot.sendMessage(chatId, `✅ *Lifetime License Generated!*\n\n🔑 \`${key}\`\n⏳ Duration: Lifetime\n\n_Send this key to your client._`, { parse_mode: 'Markdown' });
-        } catch (err) {
-            bot.sendMessage(chatId, '❌ Failed to save key to MongoDB.');
+            const [licenses, total] = await Promise.all([
+                LicenseModel.find().sort({ createdAt: -1 }).limit(20).lean(),
+                LicenseModel.countDocuments()
+            ]);
+            if (!licenses.length) return bot.sendMessage(msg.chat.id, 'There are no licenses yet.');
+
+            const lines = licenses.map((license) =>
+                `${license.key} | ${licenseStatus(license)} | ${durationLabel(license.durationDays)}`
+            );
+            await bot.sendMessage(msg.chat.id, `Licenses (${licenses.length} shown, ${total} total):\n${lines.join('\n')}`);
+        } catch (error) {
+            console.error('License listing failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not load licenses.');
         }
     });
 
-    // /reset XYM-ABCD-1234 (Unbinds a key if a client changes their bot name)
-    bot.onText(/\/(reset|revoke) (.+)/, async (msg, match) => {
-        const chatId = msg.chat.id;
-        const key = match[2].trim();
+    bot.onText(/^\/check(?:@\w+)?\s+(\S+)$/i, async (msg, match) => {
+        if (!await requireDatabase(msg.chat.id)) return;
 
         try {
+            const key = match[1].trim().toUpperCase();
+            const license = await LicenseModel.findOne({ key }).lean();
+            if (!license) return bot.sendMessage(msg.chat.id, '❌ License key not found.');
+
+            const details = `🔍 License status\nKey: ${license.key}\nStatus: ${licenseStatus(license)}\nDuration: ${durationLabel(license.durationDays)}\nExpires: ${license.expiresAt ? new Date(license.expiresAt).toISOString() : 'Starts on first activation'}`;
+            if (isOwner(msg)) {
+                return bot.sendMessage(msg.chat.id, `${details}\nBound session: ${license.boundSession || 'None'}\nCreated: ${new Date(license.createdAt).toISOString()}`);
+            }
+            await bot.sendMessage(msg.chat.id, details);
+        } catch (error) {
+            console.error('License status check failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not check this key.');
+        }
+    });
+
+    bot.onText(/^\/reset(?:@\w+)?\s+(\S+)$/i, async (msg, match) => {
+        if (!await requireOwner(msg)) return;
+        if (!await requireDatabase(msg.chat.id)) return;
+
+        try {
+            const key = match[1].trim().toUpperCase();
             const license = await LicenseModel.findOne({ key });
-            if (!license) return bot.sendMessage(chatId, '❌ Key not found.');
+            if (!license) return bot.sendMessage(msg.chat.id, '❌ License key not found.');
 
             license.isActivated = false;
             license.boundSession = null;
             license.expiresAt = null;
             await license.save();
-
-            bot.sendMessage(chatId, `✅ *Key Reset!*\n\n🔑 \`${key}\`\n\nThe key is unbound and can be used by a new bot.`, { parse_mode: 'Markdown' });
-        } catch (err) {
-            bot.sendMessage(chatId, '❌ Failed to reset key.');
+            await bot.sendMessage(msg.chat.id, `✅ Key reset and unbound: ${key}`);
+        } catch (error) {
+            console.error('License reset failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not reset this key.');
         }
     });
 
-   
-// /check XYM-ABCD-1234 (Check status)
-    bot.onText(/\/check (.+)/, async (msg, match) => {
-        const chatId = msg.chat.id;
-        const key = match[1].trim();
+    bot.onText(/^\/remove(?:@\w+)?\s+(\S+)$/i, async (msg, match) => {
+        if (!await requireOwner(msg)) return;
+        if (!await requireDatabase(msg.chat.id)) return;
 
         try {
-            const license = await LicenseModel.findOne({ key });
-            if (!license) return bot.sendMessage(chatId, '❌ Key not found.');
-
-            const validityText = license.durationDays >= 9999 ? 'Lifetime (Never Expires)' : `${license.durationDays} Days`;
-            const statusText = license.isActivated ? 'Active' : 'Inactive (Unused)';
-            const ownerText = license.boundSession ? license.boundSession : 'Not Bound Yet';
-
-            const responseMessage = 
- `🔍 Your License Status
-
-🔑 Key: ${license.key}
-📊 Status: ${statusText}
-♾️ Validity: ${validityText}
-👤 Owner: ${ownerText}`;
-
-            bot.sendMessage(chatId, responseMessage);
-        } catch (err) {
-            bot.sendMessage(chatId, '❌ Failed to check key.');
+            const key = match[1].trim().toUpperCase();
+            const result = await LicenseModel.deleteOne({ key });
+            await bot.sendMessage(msg.chat.id, result.deletedCount ? `✅ License deleted: ${key}` : '❌ License key not found.');
+        } catch (error) {
+            console.error('License deletion failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not delete this key.');
         }
     });
 
-    console.log('✅ Telegram License Bot is online and secured with MongoDB!');
+    bot.onText(/^\/killall(?:@\w+)?\s+(\S+)$/i, async (msg, match) => {
+        if (!await requireOwner(msg)) return;
+        if (!await requireDatabase(msg.chat.id)) return;
+        if (match[1] !== 'CONFIRM') {
+            return bot.sendMessage(msg.chat.id, 'This permanently deletes every license. To continue, send /killall CONFIRM.');
+        }
+
+        try {
+            const result = await LicenseModel.deleteMany({});
+            await bot.sendMessage(msg.chat.id, `✅ Deleted ${result.deletedCount} license(s).`);
+        } catch (error) {
+            console.error('Bulk license deletion failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not delete all licenses.');
+        }
+    });
+
+    bot.onText(/^\/stats(?:@\w+)?$/i, async (msg) => {
+        if (!await requireOwner(msg)) return;
+        if (!await requireDatabase(msg.chat.id)) return;
+
+        try {
+            const [total, activated, expired, pendingRequests] = await Promise.all([
+                LicenseModel.countDocuments(),
+                LicenseModel.countDocuments({ isActivated: true }),
+                LicenseModel.countDocuments({ expiresAt: { $lt: new Date() } }),
+                LicenseRequest.countDocuments({ status: 'pending' })
+            ]);
+            await bot.sendMessage(msg.chat.id, `License totals\nAll: ${total}\nActivated: ${activated}\nExpired: ${expired}\nPending client requests: ${pendingRequests}`);
+        } catch (error) {
+            console.error('License stats failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not load statistics.');
+        }
+    });
+
+    bot.onText(/^\/getkey(?:@\w+)?$/i, async (msg) => {
+        if (msg.chat.type !== 'private') {
+            return bot.sendMessage(msg.chat.id, 'Please message me privately to request a key.');
+        }
+        if (!await requireDatabase(msg.chat.id)) return;
+        if (!ownerId) {
+            return bot.sendMessage(msg.chat.id, '❌ The owner has not configured request notifications yet.');
+        }
+
+        try {
+            const requesterId = String(msg.from.id);
+            const existing = await LicenseRequest.findOne({ requesterId, status: 'pending' });
+            if (existing) return bot.sendMessage(msg.chat.id, 'Your license request is already waiting for the owner.');
+
+            const requesterName = [msg.from.first_name, msg.from.last_name].filter(Boolean).join(' ') || 'Telegram user';
+            const request = await LicenseRequest.create({
+                requesterId,
+                requesterName,
+                username: msg.from.username || ''
+            });
+            const username = msg.from.username ? `@${msg.from.username}` : 'no username';
+            await bot.sendMessage(ownerId, `New license request\nID: ${request._id}\nFrom: ${requesterName} (${username})\nTelegram ID: ${requesterId}\nApprove: /approve ${request._id} 30\nReject: /deny ${request._id}`);
+            await bot.sendMessage(msg.chat.id, '✅ Your request was sent to the owner. They will send your key here after approval.');
+        } catch (error) {
+            console.error('License request failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not submit your request. Please try again later.');
+        }
+    });
+
+    bot.onText(/^\/requests(?:@\w+)?$/i, async (msg) => {
+        if (!await requireOwner(msg)) return;
+        if (!await requireDatabase(msg.chat.id)) return;
+
+        try {
+            const requests = await LicenseRequest.find({ status: 'pending' }).sort({ createdAt: 1 }).limit(20).lean();
+            if (!requests.length) return bot.sendMessage(msg.chat.id, 'There are no pending license requests.');
+            const lines = requests.map((request) =>
+                `${request._id} | ${request.requesterName} | ${request.username ? `@${request.username}` : request.requesterId}`
+            );
+            await bot.sendMessage(msg.chat.id, `Pending requests:\n${lines.join('\n')}\n\nApprove: /approve <id> <days|life>\nReject: /deny <id>`);
+        } catch (error) {
+            console.error('License request listing failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not load requests.');
+        }
+    });
+
+    bot.onText(/^\/approve(?:@\w+)?\s+([a-f\d]{24})\s+(life|\d+)$/i, async (msg, match) => {
+        if (!await requireOwner(msg)) return;
+        if (!await requireDatabase(msg.chat.id)) return;
+
+        const lifetime = match[2].toLowerCase() === 'life';
+        const days = lifetime ? 9999 : Number(match[2]);
+        if (!lifetime && (!Number.isInteger(days) || days < 1 || days > 9998)) {
+            return bot.sendMessage(msg.chat.id, '❌ Choose a duration from 1 to 9998 days, or use life.');
+        }
+
+        try {
+            const request = await LicenseRequest.findOne({ _id: match[1], status: 'pending' });
+            if (!request) return bot.sendMessage(msg.chat.id, '❌ Pending request not found.');
+
+            const key = generateKey();
+            await LicenseModel.create({ key, durationDays: days });
+            request.status = 'approved';
+            await request.save();
+
+            let delivered = true;
+            try {
+                await bot.sendMessage(request.requesterId, `✅ Your license request was approved.\nKey: ${key}\nDuration: ${durationLabel(days)}\n\nUse /check ${key} to check its status.`);
+            } catch (deliveryError) {
+                delivered = false;
+                console.error('License delivery failed:', deliveryError.message);
+            }
+            await bot.sendMessage(msg.chat.id, `✅ License created for request ${request._id}.\nKey: ${key}\nDelivery: ${delivered ? 'sent to client' : 'failed; send the key to the client manually'}`);
+        } catch (error) {
+            console.error('License approval failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not approve this request.');
+        }
+    });
+
+    bot.onText(/^\/deny(?:@\w+)?\s+([a-f\d]{24})$/i, async (msg, match) => {
+        if (!await requireOwner(msg)) return;
+        if (!await requireDatabase(msg.chat.id)) return;
+
+        try {
+            const request = await LicenseRequest.findOneAndUpdate(
+                { _id: match[1], status: 'pending' },
+                { status: 'rejected' },
+                { new: true }
+            );
+            if (!request) return bot.sendMessage(msg.chat.id, '❌ Pending request not found.');
+            await bot.sendMessage(request.requesterId, 'Your license request was declined. Use /contact <message> if you need to reach the owner.');
+            await bot.sendMessage(msg.chat.id, `✅ Request ${request._id} declined.`);
+        } catch (error) {
+            console.error('License request rejection failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not reject this request.');
+        }
+    });
+
+    bot.onText(/^\/contact(?:@\w+)?(?:\s+([\s\S]+))?$/i, async (msg, match) => {
+        const message = match[1]?.trim();
+        const contact = process.env.OWNER_CONTACT?.trim();
+        if (!message) {
+            return bot.sendMessage(msg.chat.id, contact ? `Owner contact: ${contact}` : 'Send /contact followed by your message to contact the owner.');
+        }
+        if (msg.chat.type !== 'private') {
+            return bot.sendMessage(msg.chat.id, 'Please message me privately to contact the owner.');
+        }
+        if (!ownerId) {
+            return bot.sendMessage(msg.chat.id, contact ? `Owner contact: ${contact}` : '❌ Owner contact is not configured.');
+        }
+
+        const requesterName = [msg.from.first_name, msg.from.last_name].filter(Boolean).join(' ') || 'Telegram user';
+        const username = msg.from.username ? `@${msg.from.username}` : 'no username';
+        try {
+            await bot.sendMessage(ownerId, `Client message from ${requesterName} (${username}, ID ${msg.from.id}):\n\n${message.slice(0, 3000)}`);
+            await bot.sendMessage(msg.chat.id, '✅ Your message was sent to the owner.');
+        } catch (error) {
+            console.error('Owner contact message failed:', error);
+            await bot.sendMessage(msg.chat.id, contact ? `Could not deliver the message. Contact the owner directly: ${contact}` : '❌ Could not deliver your message. Try again later.');
+        }
+    });
+
+    console.log(`✅ Telegram License Bot is online. Owner commands ${ownerId ? 'enabled' : 'disabled'}; MongoDB state: ${mongoose.connection.readyState}`);
 }

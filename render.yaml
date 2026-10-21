@@ -8,13 +8,11 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
-      - key: VALID_KEYS
+      - key: MONGO_URI
         sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
-      - key: TELEGRAM_ADMIN_ID
-        sync: false
-      - key: OWNER_TELEGRAM
+      - key: OWNER_ID
         sync: false
       - key: OWNER_CONTACT
         sync: false

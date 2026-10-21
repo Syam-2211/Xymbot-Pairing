@@ -604,8 +604,8 @@ app.get('/api/verify-license', async (req, res) => {
             return res.status(400).json({ valid: false, message: 'Missing key or session parameter' });
         }
 
-        if (!process.env.MONGO_URI) {
-            return res.json({ valid: true, message: 'MongoDB not connected. Skipping validation.' });
+        if (!process.env.MONGO_URI || mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ valid: false, message: 'License verification is unavailable because MongoDB is not connected' });
         }
 
         const license = await License.findOne({ key });

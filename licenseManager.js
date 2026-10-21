@@ -130,7 +130,8 @@ Use the commands below to manage your licenses:
         }
     });
 
-    // /check XYM-ABCD-1234 (Check status in your custom requested layout)
+   
+// /check XYM-ABCD-1234 (Check status)
     bot.onText(/\/check (.+)/, async (msg, match) => {
         const chatId = msg.chat.id;
         const key = match[1].trim();
@@ -140,18 +141,18 @@ Use the commands below to manage your licenses:
             if (!license) return bot.sendMessage(chatId, '❌ Key not found.');
 
             const validityText = license.durationDays >= 9999 ? 'Lifetime (Never Expires)' : `${license.durationDays} Days`;
-            const statusText = license.isActivated ? '✅ Active' : '🟢 Inactive (Unused)';
+            const statusText = license.isActivated ? 'Active' : 'Inactive (Unused)';
             const ownerText = license.boundSession ? license.boundSession : 'Not Bound Yet';
 
             const responseMessage = 
-`🔍 Your License Status
+ `🔍 Your License Status
 
-🔑 Key: \`${license.key}\`
+🔑 Key: ${license.key}
 📊 Status: ${statusText}
 ♾️ Validity: ${validityText}
-👤 Owner: \`${ownerText}\``;
+👤 Owner: ${ownerText}`;
 
-            bot.sendMessage(chatId, responseMessage, { parse_mode: 'Markdown' });
+            bot.sendMessage(chatId, responseMessage);
         } catch (err) {
             bot.sendMessage(chatId, '❌ Failed to check key.');
         }

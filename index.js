@@ -1,4 +1,4 @@
-import { initTelegramBot } from './licenseManager.js';
+import { contactLicenseOwner, createLicenseRequest, initTelegramBot } from './licenseManager.js';
 import express from 'express';
 import fs from 'fs';
 import pino from 'pino';
@@ -129,12 +129,13 @@ app.get('/', (req, res) => {
         .input-group label {
             display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;
         }
-        input {
+        input, textarea {
             width: 100%; padding: 14px 16px; background: rgba(7, 9, 19, 0.85); border: 1px solid var(--glass-border);
             border-radius: 12px; color: #fff; font-size: 15px; font-weight: 500; outline: none;
             transition: border-color 0.2s, box-shadow 0.2s; font-family: inherit;
         }
-        input:focus { border-color: var(--accent-cyan); box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.2); }
+        input:focus, textarea:focus { border-color: var(--accent-cyan); box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.2); }
+        textarea { resize: vertical; min-height: 80px; }
         .btn-primary {
             width: 100%; padding: 14px 20px;
             background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
@@ -201,6 +202,17 @@ app.get('/', (req, res) => {
             font-family: 'JetBrains Mono', monospace; color: var(--accent-cyan);
             background: rgba(0, 229, 255, 0.1); padding: 2px 5px; border-radius: 4px;
         }
+        .license-panel {
+            margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--glass-border); text-align: left;
+        }
+        .license-panel h2 { color: #fff; font-size: 20px; margin-bottom: 8px; }
+        .license-tool {
+            margin-top: 18px; padding: 16px; border: 1px solid var(--glass-border);
+            border-radius: 14px; background: rgba(7, 9, 19, 0.55);
+        }
+        .license-tool h3 { font-size: 15px; color: var(--accent-cyan); margin-bottom: 12px; }
+        .license-result { min-height: 20px; margin-top: 10px; font-size: 13px; color: var(--text-muted); }
+        .license-result.error { color: #ff6b81; }
         .footer { margin-top: 24px; text-align: center; font-size: 11px; color: rgba(148,163,184,0.6); }
     </style>
 </head>
@@ -293,6 +305,57 @@ app.get('/', (req, res) => {
 
             <button class="btn-primary" onclick="resetForm()">↻ Pair Another Number</button>
         </div>
+
+        <section class="license-panel" aria-labelledby="license-title">
+            <h2 id="license-title">License Portal</h2>
+            <p class="hint-text">Request a client key, check its status, or contact the owner. Key requests are reviewed by the owner.</p>
+
+            <form class="license-tool" id="license-request-form">
+                <h3>Request a license key</h3>
+                <div class="input-group">
+                    <label for="request-name">Your name</label>
+                    <input id="request-name" name="name" type="text" maxlength="80" autocomplete="name" required>
+                </div>
+                <div class="input-group">
+                    <label for="request-contact">Telegram username or contact</label>
+                    <input id="request-contact" name="contact" type="text" maxlength="100" placeholder="@username" required>
+                </div>
+                <div class="input-group">
+                    <label for="request-message">Message (optional)</label>
+                    <input id="request-message" name="message" type="text" maxlength="500" placeholder="Add a note for the owner">
+                </div>
+                <button class="btn-primary" type="submit">Send Key Request</button>
+                <p class="license-result" id="request-result" role="status" aria-live="polite"></p>
+            </form>
+
+            <form class="license-tool" id="license-check-form">
+                <h3>Check license status</h3>
+                <div class="input-group">
+                    <label for="license-key-input">License key</label>
+                    <input id="license-key-input" name="key" type="text" maxlength="40" autocomplete="off" required>
+                </div>
+                <button class="btn-primary" type="submit">Check Key</button>
+                <p class="license-result" id="license-check-result" role="status" aria-live="polite"></p>
+            </form>
+
+            <form class="license-tool" id="license-contact-form">
+                <h3>Contact the owner</h3>
+                <div class="input-group">
+                    <label for="contact-name">Your name</label>
+                    <input id="contact-name" name="name" type="text" maxlength="80" autocomplete="name" required>
+                </div>
+                <div class="input-group">
+                    <label for="contact-details">Telegram username or contact</label>
+                    <input id="contact-details" name="contact" type="text" maxlength="100" placeholder="@username" required>
+                </div>
+                <div class="input-group">
+                    <label for="contact-message">Message</label>
+                    <textarea id="contact-message" name="message" maxlength="1000" required></textarea>
+                </div>
+                <button class="btn-primary" type="submit">Send Message</button>
+                <p class="license-result" id="contact-result" role="status" aria-live="polite"></p>
+            </form>
+        </section>
 
         <div class="footer">Powered by Baileys Engine • 🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊 & Xymbot Ecosystem</div>
     </div>
@@ -457,6 +520,60 @@ app.get('/', (req, res) => {
             document.getElementById('setup-section').style.display = 'block';
         }
 
+        async function postLicenseForm(path, form, resultElement, successMessage) {
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            resultElement.classList.remove('error');
+            resultElement.innerText = 'Sending...';
+            try {
+                const payload = Object.fromEntries(new FormData(form).entries());
+                const response = await fetch(path, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || 'Request failed.');
+                resultElement.innerText = successMessage(result);
+                form.reset();
+            } catch (error) {
+                resultElement.innerText = error.message || 'Could not reach the server.';
+                resultElement.classList.add('error');
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        document.getElementById('license-request-form').addEventListener('submit', (event) => {
+            event.preventDefault();
+            postLicenseForm('/api/license-requests', event.currentTarget, document.getElementById('request-result'),
+                (result) => 'Request sent to the owner for review. Reference: ' + result.requestId);
+        });
+
+        document.getElementById('license-check-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const resultElement = document.getElementById('license-check-result');
+            resultElement.classList.remove('error');
+            resultElement.innerText = 'Checking...';
+            try {
+                const key = document.getElementById('license-key-input').value.trim();
+                const response = await fetch('/api/license-status?key=' + encodeURIComponent(key));
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || 'Could not check this key.');
+                const expires = result.expiresAt ? new Date(result.expiresAt).toLocaleString() : 'On first activation';
+                resultElement.innerText = 'Status: ' + result.status + ' · Duration: ' + result.duration + ' · Expires: ' + expires;
+            } catch (error) {
+                resultElement.innerText = error.message || 'Could not reach the server.';
+                resultElement.classList.add('error');
+            }
+        });
+
+        document.getElementById('license-contact-form').addEventListener('submit', (event) => {
+            event.preventDefault();
+            postLicenseForm('/api/license-contact', event.currentTarget, document.getElementById('contact-result'),
+                () => 'Your message was sent to the owner.');
+        });
+
         document.getElementById('phone-input').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') requestCode();
         });
@@ -597,6 +714,77 @@ app.get('/status', (req, res) => {
 });
 
 // ─── LICENSE VERIFICATION API ──────────────────────────────────────────────
+app.post('/api/license-requests', async (req, res) => {
+    const { name, contact, message = '' } = req.body || {};
+    if (
+        typeof name !== 'string' || !name.trim() || name.trim().length > 80 ||
+        typeof contact !== 'string' || !contact.trim() || contact.trim().length > 100 ||
+        typeof message !== 'string' || message.length > 500
+    ) {
+        return res.status(400).json({ message: 'Enter a name and contact (up to 100 characters), and keep the message under 500 characters.' });
+    }
+
+    try {
+        const request = await createLicenseRequest({
+            name: name.trim(),
+            contact: contact.trim(),
+            message: message.trim()
+        });
+        return res.status(201).json({ requestId: request.id });
+    } catch (error) {
+        console.error('Website license request failed:', error);
+        return res.status(503).json({ message: error.message || 'Could not submit the license request.' });
+    }
+});
+
+app.get('/api/license-status', async (req, res) => {
+    const key = typeof req.query.key === 'string' ? req.query.key.trim().toUpperCase() : '';
+    if (!key || key.length > 40) {
+        return res.status(400).json({ message: 'Enter a valid license key.' });
+    }
+    if (!process.env.MONGO_URI || mongoose.connection.readyState !== 1) {
+        return res.status(503).json({ message: 'License status is unavailable because MongoDB is not connected.' });
+    }
+
+    try {
+        const license = await License.findOne({ key }).lean();
+        if (!license) return res.status(404).json({ message: 'License key not found.' });
+        const expired = license.expiresAt && new Date(license.expiresAt) < new Date();
+        const status = expired ? 'Expired' : license.isActivated ? 'Active' : 'Unused';
+        return res.json({
+            status,
+            duration: license.durationDays >= 9999 ? 'Lifetime' : `${license.durationDays} days`,
+            expiresAt: license.expiresAt || null
+        });
+    } catch (error) {
+        console.error('Website license status check failed:', error);
+        return res.status(500).json({ message: 'Could not check this license key.' });
+    }
+});
+
+app.post('/api/license-contact', async (req, res) => {
+    const { name, contact, message } = req.body || {};
+    if (
+        typeof name !== 'string' || !name.trim() || name.trim().length > 80 ||
+        typeof contact !== 'string' || !contact.trim() || contact.trim().length > 100 ||
+        typeof message !== 'string' || !message.trim() || message.trim().length > 1000
+    ) {
+        return res.status(400).json({ message: 'Enter your name, contact, and a message (up to 1000 characters).' });
+    }
+
+    try {
+        await contactLicenseOwner({
+            name: name.trim(),
+            contact: contact.trim(),
+            message: message.trim()
+        });
+        return res.json({ sent: true });
+    } catch (error) {
+        console.error('Website owner contact failed:', error);
+        return res.status(503).json({ message: error.message || 'Could not send your message to the owner.' });
+    }
+});
+
 app.get('/api/verify-license', async (req, res) => {
     try {
         const { key, session } = req.query;
@@ -623,6 +811,8 @@ app.get('/api/verify-license', async (req, res) => {
 
         if (!license.boundSession) {
             license.boundSession = session;
+            license.isActivated = true;
+            license.expiresAt = new Date(Date.now() + license.durationDays * 24 * 60 * 60 * 1000);
             await license.save();
         }
 

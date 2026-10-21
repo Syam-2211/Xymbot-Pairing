@@ -32,13 +32,14 @@ Set these in **Render Dashboard → your service → Environment**. Keep the bot
 | `MONGO_URI` | MongoDB connection URI for your database. Ensure your MongoDB network access settings allow the Render service to connect. |
 | `TELEGRAM_BOT_TOKEN` | Token for your Telegram bot, created with `@BotFather`. |
 | `OWNER_ID` | Your numeric Telegram user ID. Owner commands only work for this account in a private chat with the bot. |
-| `OWNER_CONTACT` | Optional public contact, such as `@yourusername` or a Telegram link, shown if bot message forwarding is unavailable. |
+| `OWNER_CONTACT` | Optional public contact, such as `@yourusername` or a Telegram link, shown by the bot if message forwarding is unavailable. |
+| `SITE_URL` | Optional public URL for the pairing and license website; used in the bot's `/start` message. |
 
-After setting the variables, redeploy the service and open a private chat with your bot. Send `/start` for a greeting, then send `/getkey` to receive a license. Owner controls require a valid `OWNER_ID`; key generation requires a working `MONGO_URI`.
+After setting the variables, redeploy the service and open a private chat with `@sneha_auth_bot`. The website is the client portal for requesting a license key, checking a key's status, and contacting the owner. Website key requests are saved in MongoDB and forwarded to the owner for approval; approving a request creates a 30-day key, which the owner sends to the contact supplied by the client. Requests require a working `MONGO_URI`, `TELEGRAM_BOT_TOKEN`, and `OWNER_ID`.
 
 ### Telegram License Commands
 
-Only the configured owner can manage the key store, and owner commands are restricted to a private chat with the bot.
+Only the configured owner can manage licenses and website requests. Owner commands are restricted to a private chat with the bot.
 
 Owner commands:
 - `/gen 30` creates a 30-day key; `/gen life` creates a lifetime key.
@@ -46,10 +47,12 @@ Owner commands:
 - `/reset <key>` unbinds a key; `/remove <key>` permanently deletes one key.
 - `/killall CONFIRM` permanently deletes every license key.
 - `/stats` shows license totals.
+- `/requests` lists pending website requests.
+- `/approve <request-id>` approves a request and creates a 30-day key; send that key to the client's supplied contact.
+- `/reject <request-id>` rejects a pending request.
+- `/contact <message>` forwards a private message to the owner.
 
-Client commands:
-- `/getkey` immediately issues one 30-day key per Telegram account. Repeating the command returns that account's current key.
-- `/check <key>` checks a license; `/contact <message>` forwards a private message to the owner.
+Clients can request keys, check their status, and contact the owner from the License Portal on the website. Status checks show whether a key is active, unused, or expired; they do not activate or bind the key.
 
 ## 💻 Local Testing
 If you want to test the server on your own computer:

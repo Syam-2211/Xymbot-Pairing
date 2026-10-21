@@ -15,6 +15,49 @@ const LicenseSchema = new mongoose.Schema({
 
 const LicenseModel = mongoose.models.License || mongoose.model('License', LicenseSchema);
 
+const LicenseRequestSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    contact: { type: String, required: true },
+    message: { type: String, default: '' },
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    licenseKey: { type: String, default: null },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const LicenseRequest = mongoose.models.LicenseRequest || mongoose.model('LicenseRequest', LicenseRequestSchema);
+let telegramBot;
+let configuredOwnerId;
+
+export async function createLicenseRequest({ name, contact, message }) {
+    if (mongoose.connection.readyState !== 1) {
+        throw new Error('License requests are unavailable because MongoDB is not connected');
+    }
+    if (!telegramBot || !configuredOwnerId) {
+        throw new Error('License request notifications are not configured');
+    }
+
+    const request = await LicenseRequest.create({ name, contact, message });
+    try {
+        await telegramBot.sendMessage(
+            configuredOwnerId,
+            `New website license request\nID: ${request.id}\nName: ${name}\nContact: ${contact}\nMessage: ${message || 'None'}\n\nApprove: /approve ${request.id}\nReject: /reject ${request.id}`
+        );
+    } catch (error) {
+        console.error('License request notification failed:', error);
+        throw new Error(`Request ${request.id} was saved, but the owner could not be notified`);
+    }
+    return request;
+}
+
+export async function contactLicenseOwner({ name, contact, message }) {
+    if (!telegramBot || !configuredOwnerId) {
+        throw new Error('Owner contact is not configured');
+    }
+    await telegramBot.sendMessage(
+        configuredOwnerId,
+        `Website message from ${name} (${contact}):\n\n${message}`
+    );
+}
 
 // 2. License Verification Function
 export async function verifyLicense(key, sessionId) {
@@ -68,6 +111,8 @@ export function initTelegramBot(app) {
     }
 
     const bot = new TelegramBot(token, { polling: true });
+    telegramBot = bot;
+    configuredOwnerId = ownerId;
 
     const generateKey = () => {
         const p1 = crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -104,7 +149,8 @@ export function initTelegramBot(app) {
     });
 
     bot.onText(/^\/start(?:@\w+)?(?:\s.*)?$/i, (msg) => {
-        bot.sendMessage(msg.chat.id, 'Welcome. Use /getkey to receive a license key.');
+        const siteUrl = process.env.SITE_URL?.trim() || 'https://xymbot-pairing.onrender.com';
+        bot.sendMessage(msg.chat.id, `Welcome. Request and check your license on the website:\n${siteUrl}`);
     });
 
     bot.onText(/^\/gen(?:@\w+)?\s+(life|\d+)$/i, async (msg, match) => {
@@ -149,6 +195,7 @@ export function initTelegramBot(app) {
     });
 
     bot.onText(/^\/check(?:@\w+)?\s+(\S+)$/i, async (msg, match) => {
+        if (!await requireOwner(msg)) return;
         if (!await requireDatabase(msg.chat.id)) return;
 
         try {
@@ -157,13 +204,75 @@ export function initTelegramBot(app) {
             if (!license) return bot.sendMessage(msg.chat.id, '❌ License key not found.');
 
             const details = `🔍 License status\nKey: ${license.key}\nStatus: ${licenseStatus(license)}\nDuration: ${durationLabel(license.durationDays)}\nExpires: ${license.expiresAt ? new Date(license.expiresAt).toISOString() : 'Starts on first activation'}`;
-            if (isOwner(msg)) {
-                return bot.sendMessage(msg.chat.id, `${details}\nBound session: ${license.boundSession || 'None'}\nCreated: ${new Date(license.createdAt).toISOString()}`);
-            }
-            await bot.sendMessage(msg.chat.id, details);
+            await bot.sendMessage(msg.chat.id, `${details}\nBound session: ${license.boundSession || 'None'}\nCreated: ${new Date(license.createdAt).toISOString()}`);
         } catch (error) {
             console.error('License status check failed:', error);
             await bot.sendMessage(msg.chat.id, '❌ Could not check this key.');
+        }
+    });
+
+    bot.onText(/^\/requests(?:@\w+)?$/i, async (msg) => {
+        if (!await requireOwner(msg)) return;
+        if (!await requireDatabase(msg.chat.id)) return;
+
+        try {
+            const requests = await LicenseRequest.find({ status: 'pending' }).sort({ createdAt: 1 }).limit(5).lean();
+            if (!requests.length) return bot.sendMessage(msg.chat.id, 'There are no pending website requests.');
+
+            const lines = requests.map((request) =>
+                `ID: ${request._id}\nName: ${request.name}\nContact: ${request.contact}\nMessage: ${(request.message || 'None').slice(0, 200)}`
+            );
+            await bot.sendMessage(msg.chat.id, `Pending website requests:\n\n${lines.join('\n\n')}`);
+        } catch (error) {
+            console.error('License request listing failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not load website requests.');
+        }
+    });
+
+    bot.onText(/^\/approve(?:@\w+)?\s+([a-f\d]{24})$/i, async (msg, match) => {
+        if (!await requireOwner(msg)) return;
+        if (!await requireDatabase(msg.chat.id)) return;
+
+        try {
+            const request = await LicenseRequest.findOne({ _id: match[1], status: 'pending' });
+            if (!request) return bot.sendMessage(msg.chat.id, '❌ Pending request not found.');
+
+            const key = generateKey();
+            await LicenseModel.create({ key, durationDays: 30 });
+            const updated = await LicenseRequest.findOneAndUpdate(
+                { _id: request._id, status: 'pending' },
+                { status: 'approved', licenseKey: key },
+                { new: true }
+            );
+            if (!updated) {
+                await LicenseModel.deleteOne({ key });
+                return bot.sendMessage(msg.chat.id, '❌ This request was already handled.');
+            }
+
+            await bot.sendMessage(
+                msg.chat.id,
+                `✅ Request approved\nName: ${request.name}\nContact: ${request.contact}\nNew 30-day key: ${key}\n\nSend the key to the client using the contact they provided.`
+            );
+        } catch (error) {
+            console.error('License request approval failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not approve this request.');
+        }
+    });
+
+    bot.onText(/^\/reject(?:@\w+)?\s+([a-f\d]{24})$/i, async (msg, match) => {
+        if (!await requireOwner(msg)) return;
+        if (!await requireDatabase(msg.chat.id)) return;
+
+        try {
+            const request = await LicenseRequest.findOneAndUpdate(
+                { _id: match[1], status: 'pending' },
+                { status: 'rejected' },
+                { new: true }
+            );
+            await bot.sendMessage(msg.chat.id, request ? `✅ Request rejected: ${request._id}` : '❌ Pending request not found.');
+        } catch (error) {
+            console.error('License request rejection failed:', error);
+            await bot.sendMessage(msg.chat.id, '❌ Could not reject this request.');
         }
     });
 
@@ -233,30 +342,6 @@ export function initTelegramBot(app) {
             await bot.sendMessage(msg.chat.id, '❌ Could not load statistics.');
         }
     });
-
-    bot.onText(/^\/getkey(?:@\w+)?$/i, async (msg) => {
-        if (msg.chat.type !== 'private') {
-            return bot.sendMessage(msg.chat.id, 'Please message me privately to request a key.');
-        }
-        if (!await requireDatabase(msg.chat.id)) return;
-
-        try {
-            const requesterId = String(msg.from.id);
-            const existing = await LicenseModel.findOne({ issuedToTelegramId: requesterId })
-                .sort({ createdAt: -1 });
-            if (existing && (!existing.expiresAt || existing.expiresAt > new Date())) {
-                return bot.sendMessage(msg.chat.id, `You already have a license key:\n${existing.key}\nStatus: ${licenseStatus(existing)}`);
-            }
-
-            const key = generateKey();
-            await LicenseModel.create({ key, durationDays: 30, issuedToTelegramId: requesterId });
-            await bot.sendMessage(msg.chat.id, `✅ Your 30-day license key is ready:\n${key}\n\nUse /check ${key} to check its status.`);
-        } catch (error) {
-            console.error('Automatic license generation failed:', error);
-            await bot.sendMessage(msg.chat.id, '❌ Could not generate a key. Please try again later.');
-        }
-    });
-
 
     bot.onText(/^\/contact(?:@\w+)?(?:\s+([\s\S]+))?$/i, async (msg, match) => {
         const message = match[1]?.trim();

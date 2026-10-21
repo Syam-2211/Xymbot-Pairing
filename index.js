@@ -3,7 +3,11 @@ import express from 'express';
 import fs from 'fs';
 import pino from 'pino';
 import mongoose from 'mongoose';
-import makeWASocket, { useMultiFileAuthState, delay, Browsers } from '@whiskeysockets/baileys';
+import makeWASocket, {
+    useMultiFileAuthState,
+    delay,
+    Browsers
+} from '@whiskeysockets/baileys';
 import qrcode from 'qrcode';
 
 const app = express();
@@ -603,17 +607,11 @@ app.get('/pair', async (req, res) => {
         const socket = makeWASocket({
             auth: state,
             printQRInTerminal: false,
-            logger: pino({ level: 'silent' }),
+            logger: pino({ level: 'warn' }),
             browser: Browsers.windows('Desktop'),
+            // Avoid advertising a retired Desktop sub-platform rejected by current WhatsApp Web.
+            syncFullHistory: false,
         });
-
-        if (!socket.authState.creds.registered) {
-            await delay(1500);
-            const code = await socket.requestPairingCode(phone);
-            activePairings.set(sessionId, { status: 'waiting', code });
-
-            res.json({ code, id: sessionId });
-        }
 
         socket.ev.on('creds.update', saveCreds);
         socket.ev.on('connection.update', async (update) => {
@@ -639,15 +637,31 @@ app.get('/pair', async (req, res) => {
                 try { fs.rmSync(sessionFolder, { recursive: true, force: true }); } catch (e) {}
                 socket.ws.close();
             } else if (connection === 'close') {
-                const code = lastDisconnect?.error?.output?.statusCode;
-                if (code && code !== 440) {
-                    activePairings.set(sessionId, { status: 'error', error: 'Connection closed or timeout' });
-                }
+                if (activePairings.get(sessionId)?.status === 'connected') return;
+                const statusCode = lastDisconnect?.error?.output?.statusCode;
+                const detail = lastDisconnect?.error?.message || 'WhatsApp connection closed';
+                console.error(`Pairing session ${sessionId} closed (${statusCode || 'unknown'}): ${detail}`);
+                const reason = statusCode ? ` (${statusCode})` : '';
+                activePairings.set(sessionId, { status: 'error', error: `Connection closed${reason}: ${detail}` });
             }
         });
-    } catch (err) {
-        console.error('Pairing error:', err);
-        res.json({ error: 'Failed to generate pairing code' });
+
+        if (!socket.authState.creds.registered) {
+            await socket.waitForSocketOpen();
+            await delay(500);
+            const code = await socket.requestPairingCode(phone);
+            activePairings.set(sessionId, { status: 'waiting', code });
+
+            return res.json({ code, id: sessionId });
+        }
+    } catch (error) {
+        const statusCode = error?.output?.statusCode;
+        console.error(`Pairing session ${sessionId} failed${statusCode ? ` (${statusCode})` : ''}:`, error);
+        activePairings.set(sessionId, {
+            status: 'error',
+            error: `Failed to generate pairing code${statusCode ? ` (${statusCode})` : ''}: ${error.message}`
+        });
+        return res.status(502).json({ error: activePairings.get(sessionId).error });
     }
 });
 
@@ -663,8 +677,10 @@ app.get('/qr', async (req, res) => {
         const socket = makeWASocket({
             auth: state,
             printQRInTerminal: false,
-            logger: pino({ level: 'silent' }),
+            logger: pino({ level: 'warn' }),
             browser: Browsers.windows('Desktop'),
+            // Avoid advertising a retired Desktop sub-platform rejected by current WhatsApp Web.
+            syncFullHistory: false,
         });
 
         socket.ev.on('creds.update', saveCreds);

@@ -39,6 +39,99 @@ app.use(express.urlencoded({ extended: true }));
 
 const activePairings = new Map();
 
+function startPairingSocket({ sessionId, sessionFolder, state, saveCreds, generateQr }) {
+    let socket;
+    let restartCount = 0;
+    let completed = false;
+    let saveCredentials = Promise.resolve();
+    let saveError;
+
+    const start = () => {
+        socket = makeWASocket({
+            auth: state,
+            printQRInTerminal: false,
+            logger: pino({ level: 'warn' }),
+            browser: Browsers.windows('Desktop'),
+            // Avoid advertising a retired Desktop sub-platform rejected by current WhatsApp Web.
+            syncFullHistory: false,
+        });
+
+        const currentSocket = socket;
+        currentSocket.ev.on('creds.update', (update) => {
+            saveCredentials = saveCredentials.then(() => saveCreds(update)).catch((error) => {
+                saveError = error;
+                console.error(`Could not save credentials for session ${sessionId}:`, error);
+            });
+        });
+        currentSocket.ev.on('connection.update', async (update) => {
+            const { connection, qr, lastDisconnect } = update;
+            try {
+                if (currentSocket !== socket || completed) return;
+                if (qr && generateQr) {
+                    const qrDataUrl = await qrcode.toDataURL(qr);
+                    activePairings.set(sessionId, { status: 'waiting', qr: qrDataUrl });
+                }
+                if (connection === 'open') {
+                    await saveCredentials;
+                    if (saveError) throw new Error('Could not save WhatsApp session credentials');
+                    await delay(3000);
+
+                    const files = fs.readdirSync(sessionFolder);
+                    const sessionObj = {};
+                    for (const file of files) {
+                        if (file !== '.done') {
+                            sessionObj[file] = fs.readFileSync(`${sessionFolder}/${file}`, 'utf8');
+                        }
+                    }
+                    const base64Session = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
+                    const finalSessionId = 'XYMBOT~' + base64Session;
+
+                    if (process.env.MONGO_URI) {
+                        await Session.create({ sessionId: finalSessionId, sessionData: base64Session })
+                            .catch(error => console.error('MongoDB save error:', error.message));
+                    }
+
+                    completed = true;
+                    activePairings.set(sessionId, { status: 'connected', sessionId: finalSessionId });
+                    try { fs.rmSync(sessionFolder, { recursive: true, force: true }); } catch (error) {}
+                    currentSocket.ws.close();
+                } else if (connection === 'close') {
+                    if (activePairings.get(sessionId)?.status === 'connected') return;
+                    const statusCode = lastDisconnect?.error?.output?.statusCode;
+                    const detail = lastDisconnect?.error?.message || 'WhatsApp connection closed';
+                    if (statusCode === 515 && restartCount < 3) {
+                        restartCount += 1;
+                        console.log(`Restarting WhatsApp pairing session ${sessionId} after restart-required (515), attempt ${restartCount}/3`);
+                        activePairings.set(sessionId, {
+                            status: 'linking',
+                            message: 'WhatsApp is restarting the pairing connection...'
+                        });
+                        await saveCredentials;
+                        if (saveError) throw new Error('Could not save credentials before reconnecting');
+                        await delay(250);
+                        if (!completed && currentSocket === socket) start();
+                        return;
+                    }
+
+                    const reason = statusCode ? ` (${statusCode})` : '';
+                    console.error(`Pairing session ${sessionId} closed${reason}: ${detail}`);
+                    activePairings.set(sessionId, {
+                        status: 'error',
+                        error: `Connection closed${reason}: ${detail}`
+                    });
+                }
+            } catch (error) {
+                console.error(`Pairing session ${sessionId} failed:`, error);
+                activePairings.set(sessionId, { status: 'error', error: 'Failed to save or complete the WhatsApp session.' });
+            }
+        });
+
+        return currentSocket;
+    };
+
+    return start();
+}
+
 // ─── PAIRING SITE FRONTEND (Original Glassmorphism UI/UX) ───────────────────
 app.get('/', (req, res) => {
     res.send(`<!DOCTYPE html>
@@ -473,6 +566,7 @@ app.get('/', (req, res) => {
                     const data = await res.json();
                     if (!data) return;
                     if (data.status === 'linking') {
+                        document.getElementById('qr-view').style.display = 'none';
                         setStatus(data.message || 'Linking WhatsApp account...', false, true);
                     } else if (data.status === 'waiting') {
                         if (data.qr) {
@@ -604,47 +698,7 @@ app.get('/pair', async (req, res) => {
 
     try {
         const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
-        const socket = makeWASocket({
-            auth: state,
-            printQRInTerminal: false,
-            logger: pino({ level: 'warn' }),
-            browser: Browsers.windows('Desktop'),
-            // Avoid advertising a retired Desktop sub-platform rejected by current WhatsApp Web.
-            syncFullHistory: false,
-        });
-
-        socket.ev.on('creds.update', saveCreds);
-        socket.ev.on('connection.update', async (update) => {
-            const { connection, lastDisconnect } = update;
-            if (connection === 'open') {
-                await delay(3000);
-                const files = fs.readdirSync(sessionFolder);
-                const sessionObj = {};
-                for (const file of files) {
-                    if (file !== '.done') {
-                        sessionObj[file] = fs.readFileSync(`${sessionFolder}/${file}`, 'utf8');
-                    }
-                }
-                const base64Session = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
-                const finalSessionId = 'XYMBOT~' + base64Session;
-
-                if (process.env.MONGO_URI) {
-                    await Session.create({ sessionId: finalSessionId, sessionData: base64Session })
-                        .catch(err => console.error('MongoDB save error:', err.message));
-                }
-
-                activePairings.set(sessionId, { status: 'connected', sessionId: finalSessionId });
-                try { fs.rmSync(sessionFolder, { recursive: true, force: true }); } catch (e) {}
-                socket.ws.close();
-            } else if (connection === 'close') {
-                if (activePairings.get(sessionId)?.status === 'connected') return;
-                const statusCode = lastDisconnect?.error?.output?.statusCode;
-                const detail = lastDisconnect?.error?.message || 'WhatsApp connection closed';
-                console.error(`Pairing session ${sessionId} closed (${statusCode || 'unknown'}): ${detail}`);
-                const reason = statusCode ? ` (${statusCode})` : '';
-                activePairings.set(sessionId, { status: 'error', error: `Connection closed${reason}: ${detail}` });
-            }
-        });
+        const socket = startPairingSocket({ sessionId, sessionFolder, state, saveCreds, generateQr: false });
 
         if (!socket.authState.creds.registered) {
             await socket.waitForSocketOpen();
@@ -674,56 +728,7 @@ app.get('/qr', async (req, res) => {
     try {
         if (!fs.existsSync(sessionFolder)) fs.mkdirSync(sessionFolder, { recursive: true });
         const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
-        const socket = makeWASocket({
-            auth: state,
-            printQRInTerminal: false,
-            logger: pino({ level: 'warn' }),
-            browser: Browsers.windows('Desktop'),
-            // Avoid advertising a retired Desktop sub-platform rejected by current WhatsApp Web.
-            syncFullHistory: false,
-        });
-
-        socket.ev.on('creds.update', saveCreds);
-        socket.ev.on('connection.update', async (update) => {
-            const { connection, qr, lastDisconnect } = update;
-            try {
-                if (qr) {
-                    const qrDataUrl = await qrcode.toDataURL(qr);
-                    activePairings.set(sessionId, { status: 'waiting', qr: qrDataUrl });
-                }
-                if (connection === 'open') {
-                    await delay(3000);
-                    const files = fs.readdirSync(sessionFolder);
-                    const sessionObj = {};
-                    for (const file of files) {
-                        if (file !== '.done') {
-                            sessionObj[file] = fs.readFileSync(`${sessionFolder}/${file}`, 'utf8');
-                        }
-                    }
-                    const base64Session = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
-                    const finalSessionId = 'XYMBOT~' + base64Session;
-
-                    if (process.env.MONGO_URI) {
-                        await Session.create({ sessionId: finalSessionId, sessionData: base64Session })
-                            .catch(err => console.error('MongoDB save error:', err.message));
-                    }
-
-                    activePairings.set(sessionId, { status: 'connected', sessionId: finalSessionId });
-                    try { fs.rmSync(sessionFolder, { recursive: true, force: true }); } catch (e) {}
-                    socket.ws.close();
-                } else if (connection === 'close') {
-                    if (activePairings.get(sessionId)?.status === 'connected') return;
-                    const statusCode = lastDisconnect?.error?.output?.statusCode;
-                    const detail = lastDisconnect?.error?.message || 'WhatsApp connection closed';
-                    console.error(`QR session ${sessionId} closed (${statusCode || 'unknown'}): ${detail}`);
-                    const reason = statusCode ? ` (${statusCode})` : '';
-                    activePairings.set(sessionId, { status: 'error', error: `QR session closed${reason}: ${detail}` });
-                }
-            } catch (error) {
-                console.error(`QR session ${sessionId} failed:`, error);
-                activePairings.set(sessionId, { status: 'error', error: 'Failed to prepare QR session.' });
-            }
-        });
+        startPairingSocket({ sessionId, sessionFolder, state, saveCreds, generateQr: true });
 
         return res.status(202).json({ id: sessionId });
     } catch (error) {

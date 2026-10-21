@@ -3,10 +3,8 @@ import express from 'express';
 import fs from 'fs';
 import pino from 'pino';
 import mongoose from 'mongoose';
-import baileys from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, delay, Browsers } from '@whiskeysockets/baileys';
 import qrcode from 'qrcode';
-
-const { default: makeWASocket, useMultiFileAuthState, delay, Browsers } = baileys;
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -443,20 +441,21 @@ app.get('/', (req, res) => {
             try {
                 const res = await fetch(\`/qr?custom=\${encodeURIComponent(customSession)}\`);
                 const data = await res.json();
-                if (data.error) {
+                if (!res.ok || data.error) {
                     setStatus('❌ ' + data.error, true, false);
                     btn.disabled = false;
                     return;
                 }
-                if (data.qr && data.id) {
+                if (data.id) {
                     activeSessionId = data.id;
-                    document.getElementById('qr-image').src = data.qr;
                     document.getElementById('qr-view').style.display = 'block';
-                    setStatus('Scan this QR code with WhatsApp...', false, true);
+                    setStatus('Waiting for QR code...', false, true);
                     startStatusPolling(activeSessionId);
+                } else {
+                    throw new Error('The server did not start a QR session.');
                 }
             } catch (err) {
-                setStatus('❌ Server connection error.', true, false);
+                setStatus('❌ ' + (err.message || 'Server connection error.'), true, false);
                 btn.disabled = false;
             }
         }
@@ -472,8 +471,11 @@ app.get('/', (req, res) => {
                     if (data.status === 'linking') {
                         setStatus(data.message || 'Linking WhatsApp account...', false, true);
                     } else if (data.status === 'waiting') {
-                        if (data.qr && document.getElementById('qr-image').src !== data.qr) {
-                            document.getElementById('qr-image').src = data.qr;
+                        if (data.qr) {
+                            const qrImage = document.getElementById('qr-image');
+                            if (qrImage.src !== data.qr) qrImage.src = data.qr;
+                            document.getElementById('qr-view').style.display = 'block';
+                            setStatus('Scan this QR code with WhatsApp...', false, false);
                         }
                     } else if (data.status === 'connected') {
                         clearInterval(pollTimer);
@@ -481,9 +483,11 @@ app.get('/', (req, res) => {
                     } else if (data.status === 'error') {
                         clearInterval(pollTimer);
                         setStatus('❌ ' + (data.error || 'Connection failed.'), true, false);
-                        resetForm();
                     }
-                } catch (e) {}
+                } catch (error) {
+                    setStatus('❌ Could not check the QR session status.', true, false);
+                    clearInterval(pollTimer);
+                }
             }, 1500);
         }
 
@@ -651,11 +655,10 @@ app.get('/pair', async (req, res) => {
 app.get('/qr', async (req, res) => {
     const sessionId = 'session-' + Date.now();
     const sessionFolder = `./tmp/${sessionId}`;
-    if (!fs.existsSync(sessionFolder)) fs.mkdirSync(sessionFolder, { recursive: true });
-
     activePairings.set(sessionId, { status: 'waiting', qr: null });
 
     try {
+        if (!fs.existsSync(sessionFolder)) fs.mkdirSync(sessionFolder, { recursive: true });
         const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
         const socket = makeWASocket({
             auth: state,
@@ -667,40 +670,50 @@ app.get('/qr', async (req, res) => {
         socket.ev.on('creds.update', saveCreds);
         socket.ev.on('connection.update', async (update) => {
             const { connection, qr, lastDisconnect } = update;
-            if (qr) {
-                const qrDataUrl = await qrcode.toDataURL(qr);
-                activePairings.set(sessionId, { status: 'waiting', qr: qrDataUrl });
-            }
-            if (connection === 'open') {
-                await delay(3000);
-                const files = fs.readdirSync(sessionFolder);
-                const sessionObj = {};
-                for (const file of files) {
-                    if (file !== '.done') {
-                        sessionObj[file] = fs.readFileSync(`${sessionFolder}/${file}`, 'utf8');
+            try {
+                if (qr) {
+                    const qrDataUrl = await qrcode.toDataURL(qr);
+                    activePairings.set(sessionId, { status: 'waiting', qr: qrDataUrl });
+                }
+                if (connection === 'open') {
+                    await delay(3000);
+                    const files = fs.readdirSync(sessionFolder);
+                    const sessionObj = {};
+                    for (const file of files) {
+                        if (file !== '.done') {
+                            sessionObj[file] = fs.readFileSync(`${sessionFolder}/${file}`, 'utf8');
+                        }
                     }
-                }
-                const base64Session = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
-                const finalSessionId = 'XYMBOT~' + base64Session;
+                    const base64Session = Buffer.from(JSON.stringify(sessionObj)).toString('base64');
+                    const finalSessionId = 'XYMBOT~' + base64Session;
 
-                if (process.env.MONGO_URI) {
-                    await Session.create({ sessionId: finalSessionId, sessionData: base64Session })
-                        .catch(err => console.error('MongoDB save error:', err.message));
-                }
+                    if (process.env.MONGO_URI) {
+                        await Session.create({ sessionId: finalSessionId, sessionData: base64Session })
+                            .catch(err => console.error('MongoDB save error:', err.message));
+                    }
 
-                activePairings.set(sessionId, { status: 'connected', sessionId: finalSessionId });
-                try { fs.rmSync(sessionFolder, { recursive: true, force: true }); } catch (e) {}
-                socket.ws.close();
-            } else if (connection === 'close') {
-                activePairings.set(sessionId, { status: 'error', error: 'QR session closed' });
+                    activePairings.set(sessionId, { status: 'connected', sessionId: finalSessionId });
+                    try { fs.rmSync(sessionFolder, { recursive: true, force: true }); } catch (e) {}
+                    socket.ws.close();
+                } else if (connection === 'close') {
+                    if (activePairings.get(sessionId)?.status === 'connected') return;
+                    const statusCode = lastDisconnect?.error?.output?.statusCode;
+                    const detail = lastDisconnect?.error?.message || 'WhatsApp connection closed';
+                    console.error(`QR session ${sessionId} closed (${statusCode || 'unknown'}): ${detail}`);
+                    const reason = statusCode ? ` (${statusCode})` : '';
+                    activePairings.set(sessionId, { status: 'error', error: `QR session closed${reason}: ${detail}` });
+                }
+            } catch (error) {
+                console.error(`QR session ${sessionId} failed:`, error);
+                activePairings.set(sessionId, { status: 'error', error: 'Failed to prepare QR session.' });
             }
         });
 
-        await delay(1000);
-        const currentData = activePairings.get(sessionId) || {};
-        res.json({ id: sessionId, qr: currentData.qr || null });
-    } catch (err) {
-        res.json({ error: 'Failed to generate QR code' });
+        return res.status(202).json({ id: sessionId });
+    } catch (error) {
+        console.error('QR session initialization failed:', error);
+        activePairings.set(sessionId, { status: 'error', error: 'Failed to initialize QR session.' });
+        return res.status(500).json({ error: 'Failed to initialize QR session.' });
     }
 });
 

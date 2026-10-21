@@ -242,7 +242,7 @@ export function initTelegramBot(app) {
             const updated = await LicenseRequest.findOneAndUpdate(
                 { _id: request._id, status: 'pending' },
                 { status: 'approved', licenseKey: key },
-                { new: true }
+                { returnDocument: 'after' }
             );
             if (!updated) {
                 await LicenseModel.deleteOne({ key });
@@ -267,7 +267,7 @@ export function initTelegramBot(app) {
             const request = await LicenseRequest.findOneAndUpdate(
                 { _id: match[1], status: 'pending' },
                 { status: 'rejected' },
-                { new: true }
+                { returnDocument: 'after' }
             );
             await bot.sendMessage(msg.chat.id, request ? `✅ Request rejected: ${request._id}` : '❌ Pending request not found.');
         } catch (error) {

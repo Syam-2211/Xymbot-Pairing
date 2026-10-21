@@ -34,7 +34,7 @@ Set these in **Render Dashboard → your service → Environment**. Keep the bot
 | `OWNER_ID` | Your numeric Telegram user ID. Owner commands only work for this account in a private chat with the bot. |
 | `OWNER_CONTACT` | Optional public contact, such as `@yourusername` or a Telegram link, shown if bot message forwarding is unavailable. |
 
-After setting the variables, redeploy the service and open a private chat with your bot. Send `/start` to see the commands available to you. If `OWNER_ID` or `MONGO_URI` is missing or invalid, owner controls or license requests will not work.
+After setting the variables, redeploy the service and open a private chat with your bot. Send `/start` for a greeting, then send `/getkey` to receive a license. Owner controls require a valid `OWNER_ID`; key generation requires a working `MONGO_URI`.
 
 ### Telegram License Commands
 
@@ -45,11 +45,10 @@ Owner commands:
 - `/keys` lists the latest 20 keys; `/check <key>` shows full status and bound session.
 - `/reset <key>` unbinds a key; `/remove <key>` permanently deletes one key.
 - `/killall CONFIRM` permanently deletes every license key.
-- `/stats` shows license totals; `/requests` lists pending client requests.
-- `/approve <request-id> <days|life>` issues a key and sends it to that client; `/deny <request-id>` rejects the request.
+- `/stats` shows license totals.
 
 Client commands:
-- `/getkey` sends a license request to the owner. The owner must approve it before a key is issued.
+- `/getkey` immediately issues one 30-day key per Telegram account. Repeating the command returns that account's current key.
 - `/check <key>` checks a license; `/contact <message>` forwards a private message to the owner.
 
 ## 💻 Local Testing

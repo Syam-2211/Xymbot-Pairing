@@ -1,4 +1,4 @@
-// import { initTelegramBot } from './licenseManager.js'; // Ensure this matches your exact filename!
+import { initTelegramBot } from './licenseManager.js'; // Ensure this matches your exact filename!
 import express from 'express';
 import fs from 'fs';
 import pino from 'pino';
@@ -637,5 +637,5 @@ app.listen(PORT, () => {
     console.log(`🌐 Pairing server live on port ${PORT}`);
     
     // Initialize the Telegram License Bot here!
-    //initTelegramBot(app);
+    initTelegramBot(app);
 });

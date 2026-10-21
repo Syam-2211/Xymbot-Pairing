@@ -510,12 +510,13 @@ app.get('/status', (req, res) => {
     });
 });
 
-app.get('/api/verify-license', (req, res) => {
+app.get('/api/verify-license', async (req, res) => {
     const key = req.query.key;
-    const result = checkLicense(key);
+    const sessionId = req.query.session; // Fetches the client's session name to trigger the lock
+    
+    const result = await checkLicense(key, sessionId);
     res.json(result);
 });
-
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime() });
 });

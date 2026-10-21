@@ -635,4 +635,7 @@ app.get('/api/verify-license', async (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`🌐 Pairing server live on port ${PORT}`);
+    
+    // Initialize the Telegram License Bot here!
+    initTelegramBot(app);
 });

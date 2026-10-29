@@ -10,7 +10,6 @@ import makeWASocket, {
     Browsers
 } from '@whiskeysockets/baileys';
 import qrcode from 'qrcode';
-import { initTelegramBot } from './licenseManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -60,7 +59,7 @@ app.get('/license-portal', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'license.html'));
 });
 
-// 3. Secure Hidden Admin SAP Control Dashboard (Outside 'public' folder)
+// 3. Secure Hidden Admin SAP Control Dashboard
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin-dashboard.html'));
 });
@@ -280,5 +279,4 @@ app.get('/status', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`🌐 Server running live on port ${PORT}`);
-    initTelegramBot(app);
 });

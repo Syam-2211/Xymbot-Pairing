@@ -355,3 +355,16 @@ app.get('/status', (req, res) => {
 app.listen(PORT, () => {
     console.log(`🌐 Server running live on port ${PORT}`);
 });
+app.post('/api/admin/delete-all', async (req, res) => {
+    const { secret } = req.body;
+    if (secret !== ADMIN_SECRET_KEY) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    try {
+        await License.deleteMany({});
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to clear licenses' });
+    }
+});

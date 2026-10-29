@@ -6,7 +6,6 @@
     <title>Xymbot • Hand-Crafted Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
             --paper-bg: #f4f1ea;
@@ -194,6 +193,8 @@
         .qr-display img {
             display: block;
             margin: 0 auto;
+            width: 180px;
+            height: 180px;
         }
 
         #custom-alert {
@@ -353,21 +354,52 @@
             try {
                 const res = await fetch(`/pair?phone=${phone}&custom=${custom}`);
                 const data = await res.json();
-                if (data.code) {
-                    document.getElementById('pair-code').innerText = data.code;
-                    resultBox.style.display = 'block';
-                    anime({ targets: resultBox, scale: [0.9, 1], opacity: [0, 1], duration: 500 });
-                    showAlert("Success!", "Pairing code generated successfully.");
+                if (data.id) {
+                    pollPairingCodeStatus(data.id, submitBtn, resultBox);
                 } else {
-                    showAlert("Generation Error", data.error || 'Failed to generate code.');
+                    showAlert("Generation Error", data.error || 'Failed to initialize session.');
+                    submitBtn.innerText = "Stamp & Generate Code";
+                    submitBtn.disabled = false;
                 }
             } catch (err) {
                 showAlert("Connection Error", "Could not reach server endpoints.");
-            } finally {
                 submitBtn.innerText = "Stamp & Generate Code";
                 submitBtn.disabled = false;
             }
         });
+
+        async function pollPairingCodeStatus(sessionId, submitBtn, resultBox) {
+            let attempts = 0;
+            const interval = setInterval(async () => {
+                attempts++;
+                if (attempts > 30) {
+                    clearInterval(interval);
+                    showAlert("Timeout", "Pairing code generation took too long.");
+                    submitBtn.innerText = "Stamp & Generate Code";
+                    submitBtn.disabled = false;
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`/status?id=${sessionId}`);
+                    const data = await res.json();
+                    if (data.code) {
+                        clearInterval(interval);
+                        document.getElementById('pair-code').innerText = data.code;
+                        resultBox.style.display = 'block';
+                        anime({ targets: resultBox, scale: [0.9, 1], opacity: [0, 1], duration: 500 });
+                        showAlert("Success!", "Pairing code generated successfully.");
+                        submitBtn.innerText = "Stamp & Generate Code";
+                        submitBtn.disabled = false;
+                    } else if (data.status === 'error') {
+                        clearInterval(interval);
+                        showAlert("Session Error", data.error || "Failed to generate pairing code.");
+                        submitBtn.innerText = "Stamp & Generate Code";
+                        submitBtn.disabled = false;
+                    }
+                } catch (err) { console.error('Polling error', err); }
+            }, 3000);
+        }
 
         document.getElementById('qr-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -393,7 +425,7 @@
             }
         });
 
-                async function pollSessionStatus(sessionId) {
+        async function pollSessionStatus(sessionId) {
             const resultBox = document.getElementById('qr-result');
             const qrImgContainer = document.getElementById('qr-code-img');
             const submitBtn = document.getElementById('qr-submit-btn');
@@ -418,12 +450,8 @@
                         clearInterval(interval);
                         qrImgContainer.innerHTML = '';
                         
-                        // Directly render the server image data URL
                         const qrImg = document.createElement('img');
                         qrImg.src = data.qr;
-                        qrImg.style.width = '180px';
-                        qrImg.style.height = '180px';
-                        qrImg.style.display = 'block';
                         qrImgContainer.appendChild(qrImg);
 
                         submitBtn.innerText = "Render QR Stamp";
@@ -436,8 +464,8 @@
                     }
                 } catch (err) { console.error('Polling error', err); }
             }, 3000);
-                            }
-        
+        }
     </script>
 </body>
-</html>
+    </html>
+    

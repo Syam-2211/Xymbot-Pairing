@@ -61,7 +61,7 @@ app.get('/license-portal', (req, res) => {
 });
 
 // 3. Secure Hidden Admin SAP Control Dashboard (Outside 'public' folder)
-app.get('/admin-master-dashboard', (req, res) => {
+app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin-dashboard.html'));
 });
 

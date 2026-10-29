@@ -193,8 +193,8 @@ app.post('/api/admin/delete-all', async (req, res) => {
     }
 });
 
-// ─── ROBUST WHATSAPP PAIRING & QR SOCKET HELPER ────────────────────────────
-function startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr }) {
+// ─── ROBUST WHATSAPP PAIRING SOCKET HELPER ─────────────────────────────────
+function startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds }) {
     let socket;
     let restartCount = 0;
     let completed = false;
@@ -205,8 +205,8 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
         socket = makeWASocket({
             auth: state,
             printQRInTerminal: false,
-            logger: pino({ level: 'silent' }), // Silenced logs for clean production console
-            browser: Browsers.macOS('Desktop'), // macOS profile for higher Baileys pairing success rate
+            logger: pino({ level: 'silent' }),
+            browser: Browsers.appropriate('Chrome'), // Uses proper standard Chrome browser profile matching web clients
             syncFullHistory: false,
             markOnlineOnConnect: false,
         });
@@ -220,14 +220,9 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
         });
 
         currentSocket.ev.on('connection.update', async (update) => {
-            const { connection, qr, lastDisconnect } = update;
+            const { connection, lastDisconnect } = update;
             try {
                 if (currentSocket !== socket || completed) return;
-                
-                if (qr && generateQr) {
-                    const qrDataUrl = await qrcode.toDataURL(qr);
-                    activePairings.set(sessionId, { status: 'waiting', qr: qrDataUrl });
-                }
 
                 if (connection === 'open') {
                     await saveCredentials;
@@ -295,12 +290,6 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
     return start();
 }
 
-function normalizeSessionName(value) {
-    if (typeof value !== 'string') return null;
-    const name = value.trim().toLowerCase();
-    return /^[a-z0-9][a-z0-9_-]{2,39}$/.test(name) ? name : null;
-}
-
 app.get('/pair', async (req, res) => {
     let phone = req.query.phone;
     if (!phone) return res.status(400).json({ error: 'Phone number is required' });
@@ -323,15 +312,27 @@ app.get('/pair', async (req, res) => {
         }
 
         const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
-        const socket = startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr: false });
+        const socket = startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds });
 
-        // Allow socket connection handshake to initialize before asking for the pairing code
-        await delay(3000);
+        // Wait securely for the Baileys multi-device socket to establish its websocket connection before requesting code
+        let retries = 0;
+        while (!socket.ws || socket.ws.readyState !== 1) {
+            retries++;
+            if (retries > 15) {
+                throw new Error('Socket connection timeout. Please try again.');
+            }
+            await delay(1000);
+        }
+
+        // Extra stabilization delay to prevent WhatsApp from rejecting the code request
+        await delay(2000);
 
         if (!socket.authState.creds.registered) {
             const code = await socket.requestPairingCode(phone);
-            activePairings.set(sessionId, { status: 'waiting', code });
-            return res.json({ code, id: sessionId });
+            // Format code cleanly with dashes for readability (e.g. ABC1-XYZ2)
+            const formattedCode = code.match(/.{1,4}/g)?.join('-') || code;
+            activePairings.set(sessionId, { status: 'waiting', code: formattedCode });
+            return res.json({ code: formattedCode, id: sessionId });
         } else {
             return res.status(400).json({ error: 'Device already registered.' });
         }
@@ -341,6 +342,7 @@ app.get('/pair', async (req, res) => {
         return res.status(502).json({ error: activePairings.get(sessionId).error });
     }
 });
+
 
 app.get('/qr', async (req, res) => {
     const sessionName = normalizeSessionName(req.query.custom);

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>License Key Verification Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --glass-bg: rgba(13, 17, 33, 0.65);
+            --glass-border: rgba(0, 229, 255, 0.25);
+            --accent-cyan: #00e5ff;
+            --accent-blue: #3d7eff;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #070913; color: var(--text-main);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+        }
+        .container {
+            width: 100%; max-width: 480px; background: var(--glass-bg);
+            border: 1.5px solid var(--glass-border); backdrop-filter: blur(30px);
+            border-radius: 28px; padding: 38px 30px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+        }
+        .nav-links { text-align: left; margin-bottom: 15px; }
+        .nav-links a { color: var(--accent-cyan); font-size: 12px; text-decoration: none; font-weight: 600; }
+        .header { text-align: center; margin-bottom: 24px; }
+        h1 { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+        .input-group { margin-bottom: 16px; text-align: left; }
+        .input-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+        input {
+            width: 100%; padding: 14px 16px; background: rgba(7, 9, 19, 0.85); border: 1px solid var(--glass-border);
+            border-radius: 12px; color: #fff; font-size: 15px; outline: none; font-family: 'JetBrains Mono', monospace;
+        }
+        .btn-primary {
+            width: 100%; padding: 14px 20px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border: none; border-radius: 12px; color: #070913; font-size: 15px; font-weight: 700; cursor: pointer;
+        }
+        #result-box {
+            margin-top: 20px; padding: 16px; border-radius: 12px; background: rgba(0,0,0,0.4);
+            border: 1px solid var(--glass-border); display: none; font-size: 13px; line-height: 1.5; text-align: left;
+        }
+        .success { color: #00f090; font-weight: 700; }
+        .error { color: #ff6b81; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="/">← Back to WhatsApp Pairing</a>
+        </div>
+        <div class="header">
+            <h1>License Status Checker</h1>
+            <p style="font-size: 13px; color: var(--text-muted);">Verify your subscription or bot license key validity.</p>
+        </div>
+
+        <div class="input-group">
+            <label for="license-input">Enter License Key</label>
+            <input type="text" id="license-input" placeholder="XYM-XXXX-XXXX-XXXX">
+        </div>
+
+        <button class="btn-primary" onclick="checkLicenseStatus()">Check Status</button>
+
+        <div id="result-box">
+            <div id="status-result-text"></div>
+        </div>
+    </div>
+
+    <script>
+        async function checkLicenseStatus() {
+            const key = document.getElementById('license-input').value.trim();
+            const resultBox = document.getElementById('result-box');
+            const resultText = document.getElementById('status-result-text');
+
+            if (!key) {
+                alert('Please enter a license key.');
+                return;
+            }
+
+            resultBox.style.display = 'block';
+            resultText.innerHTML = 'Checking license database...';
+
+            try {
+                const response = await fetch('/api/check-license', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ licenseKey: key })
+                });
+                const data = await response.json();
+
+                if (data.valid) {
+                    resultText.innerHTML = `
+                        <span class="success">✅ License is Active!</span><br>
+                        <strong>Expires At:</strong> ${new Date(data.expiresAt).toLocaleString()}<br>
+                        <strong>Bound Session:</strong> ${data.boundSession}
+                    `;
+                } else {
+                    resultText.innerHTML = `<span class="error">❌ ${data.error || 'Invalid or expired license key.'}</span>`;
+                }
+            } catch (err) {
+                resultText.innerHTML = `<span class="error">❌ Failed to connect to server.</span>`;
+            }
+        }
+    </script>
+</body>
+</html>

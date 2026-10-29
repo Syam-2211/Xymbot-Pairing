@@ -53,7 +53,7 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
             auth: state,
             printQRInTerminal: false,
             logger: pino({ level: 'warn' }),
-            browser: Browsers.windows('Desktop'),
+            browser: Browsers.macOS('Desktop'),
             // Avoid advertising a retired Desktop sub-platform rejected by current WhatsApp Web.
             syncFullHistory: false,
         });

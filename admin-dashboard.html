@@ -52,7 +52,7 @@
 <body>
     <div class="container" id="admin-hub">
         <div id="login-box">
-            <h1>🔒 Admin SAP Authentication</h1>
+            <h1>🔒 Admin SAP Authentication • 🤍⃞𝄟ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓</h1>
             <p class="subtitle">Enter your master admin password to access control panel.</p>
             <div class="input-group">
                 <label>Admin Secret Key</label>
@@ -64,7 +64,7 @@
         <div id="dashboard-box" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <div>
-                    <h1>SAP Control Center</h1>
+                    <h1>SAP Control Center • 🤍⃞𝄟ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓</h1>
                     <p class="subtitle">Manage, view, and revoke active customer license keys.</p>
                 </div>
                 <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="generateKey()">+ Generate Key</button>
@@ -93,7 +93,6 @@
 
         async function verifyAdmin() {
             const secret = document.getElementById('admin-secret').value.trim();
-            // Simple secure backend verification check or token exchange
             if (secret === 'binisha') {
                 document.getElementById('login-box').style.display = 'none';
                 document.getElementById('dashboard-box').style.display = 'block';
@@ -104,7 +103,6 @@
         }
 
         async function fetchKeys() {
-            // Mock or live fetch from backend admin routes
             const tbody = document.getElementById('keys-table-body');
             tbody.innerHTML = `
                 <tr>

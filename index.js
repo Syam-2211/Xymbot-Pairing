@@ -132,7 +132,17 @@ app.get('/api/admin/licenses', async (req, res) => {
 
     try {
         const licenses = await License.find({}).sort({ createdAt: -1 });
-        const activeSessionsCount = await Session.countDocuments({});
+        
+        // Count ONLY real active connected bots bound to valid non-expired keys
+        const activeSessionsCount = await License.countDocuments({
+            isActivated: true,
+            boundSession: { $ne: null },
+            $or: [
+                { expiresAt: { $gt: new Date() } },
+                { expiresAt: null }
+            ]
+        });
+
         res.json({ success: true, licenses, activeSessionsCount });
     } catch (err) {
         res.status(500).json({ success: false, error: 'Database fetch error' });
@@ -169,7 +179,21 @@ app.post('/api/admin/revoke', async (req, res) => {
     }
 });
 
-// ─── WHATSAPP PAIRING LOGIC HELPER ─────────────────────────────────────────
+app.post('/api/admin/delete-all', async (req, res) => {
+    const { secret } = req.body;
+    if (secret !== ADMIN_SECRET_KEY) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    try {
+        await License.deleteMany({});
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to clear licenses' });
+    }
+});
+
+// ─── ROBUST WHATSAPP PAIRING & QR SOCKET HELPER ────────────────────────────
 function startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr }) {
     let socket;
     let restartCount = 0;
@@ -181,9 +205,10 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
         socket = makeWASocket({
             auth: state,
             printQRInTerminal: false,
-            logger: pino({ level: 'warn' }),
-            browser: Browsers.windows('Desktop'),
+            logger: pino({ level: 'silent' }), // Silenced logs for clean production console
+            browser: Browsers.macOS('Desktop'), // macOS profile for higher Baileys pairing success rate
             syncFullHistory: false,
+            markOnlineOnConnect: false,
         });
 
         const currentSocket = socket;
@@ -198,10 +223,12 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
             const { connection, qr, lastDisconnect } = update;
             try {
                 if (currentSocket !== socket || completed) return;
+                
                 if (qr && generateQr) {
                     const qrDataUrl = await qrcode.toDataURL(qr);
                     activePairings.set(sessionId, { status: 'waiting', qr: qrDataUrl });
                 }
+
                 if (connection === 'open') {
                     await saveCredentials;
                     if (saveError) throw new Error('Could not save WhatsApp session credentials');
@@ -220,6 +247,7 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
                     if (!process.env.MONGO_URI || mongoose.connection.readyState !== 1) {
                         throw new Error('MongoDB is required to save named pairing sessions.');
                     }
+                    
                     await Session.create({
                         sessionId: finalSessionId,
                         sessionName,
@@ -234,34 +262,29 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
                     if (activePairings.get(sessionId)?.status === 'connected') return;
                     const statusCode = lastDisconnect?.error?.output?.statusCode;
                     const detail = lastDisconnect?.error?.message || 'WhatsApp connection closed';
+                    
                     if (statusCode === 515 && restartCount < 3) {
                         restartCount += 1;
                         activePairings.set(sessionId, {
                             status: 'linking',
-                            message: 'WhatsApp is restarting the pairing connection...'
+                            message: 'Reconnecting pairing socket...'
                         });
                         await saveCredentials;
-                        if (saveError) throw new Error('Could not save credentials before reconnecting');
-                        await delay(250);
+                        await delay(500);
                         if (!completed && currentSocket === socket) start();
                         return;
                     }
 
-                    const reason = statusCode ? ` (${statusCode})` : '';
-                    console.error(`Pairing session ${sessionId} closed${reason}: ${detail}`);
                     activePairings.set(sessionId, {
                         status: 'error',
-                        error: `Connection closed${reason}: ${detail}`
+                        error: `Connection closed (${statusCode || 'Unknown'}): ${detail}`
                     });
                 }
             } catch (error) {
                 console.error(`Pairing session ${sessionId} failed:`, error);
-                const duplicateSessionName = error?.code === 11000;
                 activePairings.set(sessionId, {
                     status: 'error',
-                    error: duplicateSessionName
-                        ? 'This custom session name is already in use. Choose a different name and try again.'
-                        : error.message || 'Failed to save or complete the WhatsApp session.'
+                    error: error.code === 11000 ? 'Session name already exists.' : error.message
                 });
             }
         });
@@ -302,15 +325,15 @@ app.get('/pair', async (req, res) => {
         const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
         const socket = startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr: false });
 
+        // Allow socket connection handshake to initialize before asking for the pairing code
+        await delay(3000);
+
         if (!socket.authState.creds.registered) {
-            if (typeof socket.waitForSocketOpen === 'function') {
-                await socket.waitForSocketOpen();
-            } else {
-                await delay(2000);
-            }
             const code = await socket.requestPairingCode(phone);
             activePairings.set(sessionId, { status: 'waiting', code });
             return res.json({ code, id: sessionId });
+        } else {
+            return res.status(400).json({ error: 'Device already registered.' });
         }
     } catch (error) {
         console.error(`Pairing failed for ${sessionId}:`, error);
@@ -346,45 +369,12 @@ app.get('/qr', async (req, res) => {
     }
 });
 
-app.get('/api/admin/licenses', async (req, res) => {
-    const { secret } = req.query;
-    if (secret !== ADMIN_SECRET_KEY) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-
-    try {
-        const licenses = await License.find({}).sort({ createdAt: -1 });
-        
-        // Count ONLY sessions that are bound to an active, non-expired license key
-        const activeSessionsCount = await License.countDocuments({
-            isActivated: true,
-            boundSession: { $ne: null },
-            $or: [
-                { expiresAt: { gt: new Date() } },
-                { expiresAt: null }
-            ]
-        });
-
-        res.json({ success: true, licenses, activeSessionsCount });
-    } catch (err) {
-        res.status(500).json({ success: false, error: 'Database fetch error' });
-    }
+app.get('/status', (req, res) => {
+    const id = req.query.id;
+    if (!id || !activePairings.has(id)) return res.json({ status: 'not_found' });
+    res.json(activePairings.get(id));
 });
-
 
 app.listen(PORT, () => {
     console.log(`🌐 Server running live on port ${PORT}`);
-});
-app.post('/api/admin/delete-all', async (req, res) => {
-    const { secret } = req.body;
-    if (secret !== ADMIN_SECRET_KEY) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-
-    try {
-        await License.deleteMany({});
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false, error: 'Failed to clear licenses' });
-    }
 });

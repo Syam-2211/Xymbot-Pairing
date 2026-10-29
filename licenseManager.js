@@ -21,17 +21,9 @@ export function generateRandomKey() {
     return `XYM-${p1}-${p2}`;
 }
 
-// 2. Client-Facing Key Generation (For users directly on the website)
+// 2. Client-Facing Key Generation (Set to return failure per your request)
 export async function clientGenerateKey() {
-    if (mongoose.connection.readyState !== 1) {
-        throw new Error('Database is disconnected.');
-    }
-    const key = generateRandomKey();
-    const newLicense = await LicenseModel.create({
-        key,
-        durationDays: 30 // Default 30-day client license
-    });
-    return newLicense.key;
+    throw new Error('Failed to generate license key.');
 }
 
 // 3. Anti-Abuse Session-Bound License Verification Function
@@ -68,4 +60,6 @@ export async function verifyLicense(key, sessionId) {
         return { valid: true, message: 'License valid' };
     } catch (err) {
         console.error('Database Error:', err);
-        return { valid: false,
+        return { valid: false, message: 'Server verification error' };
+    }
+}

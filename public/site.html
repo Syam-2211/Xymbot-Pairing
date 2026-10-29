@@ -393,7 +393,7 @@
             }
         });
 
-        async function pollSessionStatus(sessionId) {
+                async function pollSessionStatus(sessionId) {
             const resultBox = document.getElementById('qr-result');
             const qrImgContainer = document.getElementById('qr-code-img');
             const submitBtn = document.getElementById('qr-submit-btn');
@@ -403,7 +403,7 @@
             let attempts = 0;
             const interval = setInterval(async () => {
                 attempts++;
-                if (attempts > 25) { // 75 seconds timeout safeguard
+                if (attempts > 25) {
                     clearInterval(interval);
                     qrImgContainer.innerHTML = '<p style="color:var(--accent-red); font-family:Caveat;">QR stamp timed out. Try again.</p>';
                     submitBtn.innerText = "Render QR Stamp";
@@ -417,15 +417,15 @@
                     if (data.status === 'waiting' && data.qr) {
                         clearInterval(interval);
                         qrImgContainer.innerHTML = '';
-                        // Renders the QR image directly into the container using qrcode.js
-                        new QRCode(qrImgContainer, {
-                            text: data.qr,
-                            width: 180,
-                            height: 180,
-                            colorDark: "#1a1a1a",
-                            colorLight: "#ffffff",
-                            correctLevel: QRCode.CorrectLevel.M
-                        });
+                        
+                        // Directly render the server image data URL
+                        const qrImg = document.createElement('img');
+                        qrImg.src = data.qr;
+                        qrImg.style.width = '180px';
+                        qrImg.style.height = '180px';
+                        qrImg.style.display = 'block';
+                        qrImgContainer.appendChild(qrImg);
+
                         submitBtn.innerText = "Render QR Stamp";
                         submitBtn.disabled = false;
                     } else if (data.status === 'error') {
@@ -436,7 +436,8 @@
                     }
                 } catch (err) { console.error('Polling error', err); }
             }, 3000);
-        }
+                            }
+        
     </script>
 </body>
 </html>

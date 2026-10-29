@@ -3,87 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xymbot • SAP Admin Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <title>Xymbot • SAP Admin Journal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <style>
         :root {
-            --bg-deep: #050711;
-            --glass-bg: rgba(13, 17, 33, 0.90);
-            --glass-border: rgba(0, 229, 255, 0.3);
-            --accent-cyan: #00e5ff;
-            --accent-purple: #9d4edd;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --danger: #ff6b81;
-            --success: #00f090;
+            --paper-bg: #f4f1ea;
+            --paper-line: #d3c9b1;
+            --ink-blue: #1b3b6f;
+            --ink-black: #1a1a1a;
+            --accent-red: #c0392b;
+            --pencil: #7f8c8d;
+            --success: #27ae60;
         }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-deep); color: var(--text-main);
-            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+            background-color: var(--paper-bg);
+            background-image: 
+                linear-gradient(to right, var(--paper-line) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--paper-line) 1px, transparent 1px);
+            background-size: 24px 24px;
+            color: var(--ink-black);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            font-family: 'Special Elite', monospace;
         }
-        .container {
-            width: 100%; max-width: 1000px; background: var(--glass-bg); border: 1.5px solid var(--glass-border);
-            backdrop-filter: blur(25px); border-radius: 30px; padding: 36px; box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+
+        .notebook-card {
+            width: 100%;
+            max-width: 650px;
+            background: #fffdf9;
+            border: 2px dashed #b5a88c;
+            padding: 35px;
+            box-shadow: 8px 12px 0px rgba(0, 0, 0, 0.12);
+            position: relative;
+            transform: rotate(-0.3deg);
         }
-        h1 { font-size: 26px; font-weight: 800; background: linear-gradient(135deg, #fff 30%, var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
-        .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
-        .input-group { margin-bottom: 16px; text-align: left; }
-        .input-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+
+        .notebook-card::before {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0; left: 45px;
+            width: 2px;
+            background: rgba(192, 57, 43, 0.3);
+        }
+
+        .header h1 {
+            font-family: 'Kalam', cursive;
+            font-size: 28px;
+            color: var(--ink-blue);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .header p {
+            font-family: 'Caveat', cursive;
+            font-size: 18px;
+            color: var(--pencil);
+            margin-bottom: 20px;
+        }
+
+        .input-group { margin-bottom: 16px; }
+        .input-group label {
+            display: block;
+            font-size: 14px;
+            font-family: 'Kalam', cursive;
+            color: var(--ink-blue);
+            margin-bottom: 4px;
+        }
+
         input {
-            width: 100%; padding: 14px; background: rgba(5,7,17,0.9); border: 1px solid var(--glass-border);
-            border-radius: 12px; color: #fff; font-size: 14px; outline: none; font-family: 'JetBrains Mono', monospace;
+            width: 100%;
+            padding: 10px 14px;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid var(--ink-black);
+            font-size: 20px;
+            outline: none;
+            font-family: 'Caveat', cursive;
+            color: var(--ink-blue);
         }
-        .btn-primary {
-            width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-            border: none; border-radius: 12px; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
-            box-shadow: 0 5px 20px rgba(0,229,255,0.25); transition: opacity 0.2s;
+
+        .stamp-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--ink-blue);
+            color: #fff;
+            border: 2px solid var(--ink-black);
+            font-family: 'Kalam', cursive;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px var(--ink-black);
+            transition: all 0.1s ease;
+            text-transform: uppercase;
         }
-        .btn-primary:hover { opacity: 0.9; }
-        .sap-table-wrap { overflow-x: auto; margin-top: 16px; max-height: 420px; border-radius: 12px; border: 1px solid var(--glass-border); }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-        th { background: rgba(0,229,255,0.1); color: var(--accent-cyan); padding: 14px; font-weight: 700; border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; backdrop-filter: blur(10px); }
-        td { padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; }
-        .action-btn { padding: 6px 12px; border-radius: 6px; border: none; font-size: 11px; font-weight: 700; cursor: pointer; }
-        .btn-delete { background: rgba(255,107,129,0.2); color: var(--danger); border: 1px solid rgba(255,107,129,0.4); }
-        .btn-delete:hover { background: rgba(255,107,129,0.4); }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
-        .stat-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 14px; padding: 16px; }
-        .stat-card h4 { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
-        .stat-card p { font-size: 22px; font-weight: 700; color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; }
+
+        .stamp-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px var(--ink-black);
+        }
+
+        .btn-danger {
+            background: var(--accent-red);
+            margin-top: 10px;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-note {
+            background: #fcf8ec;
+            border: 1px dashed var(--ink-blue);
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-note h4 { font-family: 'Kalam', cursive; font-size: 14px; color: var(--pencil); }
+        .stat-note p { font-family: 'Special Elite', monospace; font-size: 24px; color: var(--accent-red); margin-top: 4px; }
+
+        .sap-table-wrap {
+            overflow-x: auto;
+            max-height: 280px;
+            border: 1px solid var(--paper-line);
+            margin-top: 15px;
+            background: #fff;
+        }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; }
+        th { background: #f0ece1; color: var(--ink-blue); padding: 10px; font-family: 'Kalam', cursive; font-size: 15px; border-bottom: 2px solid var(--paper-line); }
+        td { padding: 10px; border-bottom: 1px solid var(--paper-line); font-family: 'Special Elite', monospace; }
+
+        .action-btn {
+            padding: 4px 8px;
+            background: var(--accent-red);
+            color: #fff;
+            border: 1px solid var(--ink-black);
+            font-family: 'Kalam', cursive;
+            font-size: 12px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
-    <div class="container" id="admin-hub">
-        <!-- Login Box -->
+
+    <div class="notebook-card" id="admin-hub">
+        <!-- Login Screen -->
         <div id="login-box">
-            <h1>🔒 Admin SAP Authentication</h1>
-            <p class="subtitle">Enter your master admin password to access control panel.</p>
-            <div class="input-group">
-                <label>Admin Secret Key</label>
-                <input type="password" id="admin-secret" placeholder="Enter master key..." onkeypress="if(event.key === 'Enter') verifyAdmin()">
+            <div class="header">
+                <h1>🔒 Admin Notebook Login</h1>
+                <p>// enter master passphrase to view SAP logs • 🤍⃞ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓</p>
             </div>
-            <button class="btn-primary" onclick="verifyAdmin()">Login to Dashboard</button>
+            <div class="input-group">
+                <label>Admin Secret Passphrase:</label>
+                <input type="password" id="admin-secret" placeholder="Enter secret key..." onkeypress="if(event.key === 'Enter') verifyAdmin()">
+            </div>
+            <button class="stamp-btn" onclick="verifyAdmin()">Unlock Journal</button>
         </div>
 
-        <!-- Dashboard Box -->
+        <!-- Dashboard Screen -->
         <div id="dashboard-box" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+            <div class="header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
                 <div>
-                    <h1>SAP Control Center • 🤍⃞ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓</h1>
-                    <p class="subtitle">Real-time database license & session monitoring.</p>
+                    <h1>SAP Control Journal</h1>
+                    <p>// live key database & active bot connections</p>
                 </div>
-                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="generateAdminKey()">+ Generate New Key</button>
+                <button class="stamp-btn" style="width: auto; padding: 6px 14px; font-size: 14px;" onclick="generateAdminKey()">+ Stamp New Key</button>
             </div>
 
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h4>Total Active Licenses</h4>
+            <div class="stats-row">
+                <div class="stat-note">
+                    <h4>Total Active Keys</h4>
                     <p id="stat-total">0</p>
                 </div>
-                <div class="stat-card">
-                    <h4>Active Bot Sessions</h4>
+                <div class="stat-note">
+                    <h4>Active Connected Bots</h4>
                     <p id="stat-sessions">0</p>
                 </div>
             </div>
@@ -100,21 +202,23 @@
                         </tr>
                     </thead>
                     <tbody id="keys-table-body">
-                        <tr><td colspan="5" style="text-align:center; color: var(--text-muted);">Loading live keys...</td></tr>
+                        <tr><td colspan="5" style="text-align:center; color: var(--pencil);">Opening pages...</td></tr>
                     </tbody>
                 </table>
             </div>
+
+            <button class="stamp-btn btn-danger" onclick="deleteAllKeys()">⚠️ Delete All License Keys</button>
         </div>
     </div>
 
     <script>
-        anime({ targets: '#admin-hub', opacity: [0, 1], translateY: [20, 0], duration: 800, easing: 'easeOutExpo' });
+        anime({ targets: '#admin-hub', opacity: [0, 1], scale: [0.95, 1], duration: 600, easing: 'easeOutExpo' });
 
         let currentAdminSecret = '';
 
         async function verifyAdmin() {
             const secret = document.getElementById('admin-secret').value.trim();
-            if (!secret) return alert('Please enter the admin key.');
+            if (!secret) return alert('Please enter admin secret.');
 
             try {
                 const res = await fetch('/api/admin/verify', {
@@ -130,10 +234,10 @@
                     document.getElementById('dashboard-box').style.display = 'block';
                     loadDashboardData();
                 } else {
-                    alert('Access Denied: Incorrect Admin Key!');
+                    alert('Incorrect pass-note key!');
                 }
             } catch (err) {
-                alert('Connection error verifying admin credentials.');
+                alert('Connection error.');
             }
         }
 
@@ -147,18 +251,19 @@
                     tbody.innerHTML = '';
 
                     document.getElementById('stat-total').innerText = data.licenses.length;
+                    // Displays ONLY real active connected bot sessions from database count
                     document.getElementById('stat-sessions').innerText = data.activeSessionsCount || 0;
 
                     if (data.licenses.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">No license keys found in database.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--pencil);">No keys stamped in journal yet.</td></tr>`;
                         return;
                     }
 
                     data.licenses.forEach(lic => {
                         const isExpired = lic.expiresAt && new Date(lic.expiresAt) < new Date();
                         const statusHtml = isExpired 
-                            ? `<span style="color:var(--danger)">Expired</span>` 
-                            : (lic.isActivated ? `<span style="color:var(--success)">Active & Bound</span>` : `<span style="color:var(--accent-cyan)">Unused</span>`);
+                            ? `<span style="color:var(--accent-red)">Expired</span>` 
+                            : (lic.isActivated ? `<span style="color:var(--success)">Bound ✓</span>` : `<span style="color:var(--ink-blue)">Unused</span>`);
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
@@ -166,13 +271,13 @@
                             <td>${lic.boundSession || '<i>Unbound</i>'}</td>
                             <td>${lic.expiresAt ? new Date(lic.expiresAt).toLocaleDateString() : 'Never'}</td>
                             <td>${statusHtml}</td>
-                            <td><button class="action-btn btn-delete" onclick="revokeKey('${lic.key}')">Revoke</button></td>
+                            <td><button class="action-btn" onclick="revokeKey('${lic.key}')">Tear</button></td>
                         `;
                         tbody.appendChild(tr);
                     });
                 }
             } catch (err) {
-                console.error('Failed to load dashboard records', err);
+                console.error('Failed to load journal records', err);
             }
         }
 
@@ -185,18 +290,17 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert(`New Key Generated: ${data.key}`);
                     loadDashboardData();
                 } else {
-                    alert(data.error || 'Failed to generate key.');
+                    alert(data.error || 'Failed to stamp key.');
                 }
             } catch (err) {
-                alert('Connection error while generating key.');
+                alert('Connection error.');
             }
         }
 
         async function revokeKey(key) {
-            if (!confirm(`Are you sure you want to revoke key ${key}?`)) return;
+            if (!confirm(`Tear out key ${key} from journal?`)) return;
             try {
                 const res = await fetch('/api/admin/revoke', {
                     method: 'POST',
@@ -204,13 +308,29 @@
                     body: JSON.stringify({ secret: currentAdminSecret, key })
                 });
                 const data = await res.json();
+                if (data.success) loadDashboardData();
+            } catch (err) {
+                alert('Connection error.');
+            }
+        }
+
+        async function deleteAllKeys() {
+            if (!confirm('⚠️ Are you sure you want to delete ALL license keys from the journal?')) return;
+            try {
+                const res = await fetch('/api/admin/delete-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ secret: currentAdminSecret })
+                });
+                const data = await res.json();
                 if (data.success) {
+                    alert('All keys cleared successfully.');
                     loadDashboardData();
                 } else {
-                    alert(data.error || 'Failed to revoke key.');
+                    alert('Failed to delete keys.');
                 }
             } catch (err) {
-                alert('Connection error while revoking key.');
+                alert('Connection error.');
             }
         }
     </script>

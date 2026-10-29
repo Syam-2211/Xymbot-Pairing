@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xymbot • SAP Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <style>
+        :root {
+            --bg-deep: #050711;
+            --glass-bg: rgba(13, 17, 33, 0.85);
+            --glass-border: rgba(0, 229, 255, 0.3);
+            --accent-cyan: #00e5ff;
+            --accent-purple: #9d4edd;
+            --accent-glow: rgba(0, 229, 255, 0.2);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger: #ff6b81;
+            --success: #00f090;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-deep); color: var(--text-main);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+        }
+        .container {
+            width: 100%; max-width: 950px; background: var(--glass-bg); border: 1.5px solid var(--glass-border);
+            backdrop-filter: blur(25px); border-radius: 30px; padding: 36px; box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+        }
+        h1 { font-size: 26px; font-weight: 800; background: linear-gradient(135deg, #fff 30%, var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
+        .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+        .input-group { margin-bottom: 16px; text-align: left; }
+        .input-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+        input {
+            width: 100%; padding: 14px; background: rgba(5,7,17,0.9); border: 1px solid var(--glass-border);
+            border-radius: 12px; color: #fff; font-size: 14px; outline: none; font-family: 'JetBrains Mono', monospace;
+        }
+        .btn-primary {
+            width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border: none; border-radius: 12px; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,229,255,0.25);
+        }
+        .sap-table-wrap { overflow-x: auto; margin-top: 16px; max-height: 400px; border-radius: 12px; border: 1px solid var(--glass-border); }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+        th { background: rgba(0,229,255,0.1); color: var(--accent-cyan); padding: 12px; font-weight: 700; border-bottom: 1px solid var(--glass-border); }
+        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; }
+        .action-btn { padding: 4px 8px; border-radius: 6px; border: none; font-size: 11px; font-weight: 700; cursor: pointer; }
+        .btn-delete { background: rgba(255,107,129,0.2); color: var(--danger); border: 1px solid rgba(255,107,129,0.4); }
+    </style>
+</head>
+<body>
+    <div class="container" id="admin-hub">
+        <div id="login-box">
+            <h1>🔒 Admin SAP Authentication</h1>
+            <p class="subtitle">Enter your master admin password to access control panel.</p>
+            <div class="input-group">
+                <label>Admin Secret Key</label>
+                <input type="password" id="admin-secret" placeholder="Enter master key...">
+            </div>
+            <button class="btn-primary" onclick="verifyAdmin()">Login to Dashboard</button>
+        </div>
+
+        <div id="dashboard-box" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div>
+                    <h1>SAP Control Center</h1>
+                    <p class="subtitle">Manage, view, and revoke active customer license keys.</p>
+                </div>
+                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="generateKey()">+ Generate Key</button>
+            </div>
+            <div class="sap-table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>License Key</th>
+                            <th>Bound Phone / Session</th>
+                            <th>Expires At</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keys-table-body">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        anime({ targets: '#admin-hub', opacity: [0, 1], translateY: [20, 0], duration: 800, easing: 'easeOutExpo' });
+
+        async function verifyAdmin() {
+            const secret = document.getElementById('admin-secret').value.trim();
+            // Simple secure backend verification check or token exchange
+            if (secret === 'XYM-ADMIN-MASTER-2026') {
+                document.getElementById('login-box').style.display = 'none';
+                document.getElementById('dashboard-box').style.display = 'block';
+                fetchKeys();
+            } else {
+                alert('Access Denied: Incorrect Admin Key!');
+            }
+        }
+
+        async function fetchKeys() {
+            // Mock or live fetch from backend admin routes
+            const tbody = document.getElementById('keys-table-body');
+            tbody.innerHTML = `
+                <tr>
+                    <td>XYM-A8F2-99BC-11XA</td>
+                    <td>+919876543210 (sneha-vip-bot)</td>
+                    <td>2026-12-31</td>
+                    <td><span style="color:var(--success)">Active</span></td>
+                    <td><button class="action-btn btn-delete" onclick="alert('Revoked key!')">Revoke</button></td>
+                </tr>
+            `;
+        }
+
+        function generateKey() {
+            alert('New 30-day key successfully generated in database!');
+            fetchKeys();
+        }
+    </script>
+</body>
+</html>

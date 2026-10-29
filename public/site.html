@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊 & Xymbot • Pairing Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <style>
+        :root {
+            --glass-bg: rgba(13, 17, 33, 0.65);
+            --glass-border: rgba(0, 229, 255, 0.25);
+            --accent-cyan: #00e5ff;
+            --accent-blue: #3d7eff;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #070913; color: var(--text-main);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+        }
+        .container {
+            width: 100%; max-width: 500px; background: var(--glass-bg);
+            border: 1.5px solid var(--glass-border); backdrop-filter: blur(30px);
+            border-radius: 28px; padding: 38px 30px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+        }
+        .nav-links { text-align: right; margin-bottom: 15px; }
+        .nav-links a { color: var(--accent-cyan); font-size: 12px; text-decoration: none; font-weight: 600; }
+        .header { text-align: center; margin-bottom: 26px; }
+        h1 { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+        .btn-primary {
+            width: 100%; padding: 14px 20px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border: none; border-radius: 12px; color: #070913; font-weight: 700; cursor: pointer; margin-top: 10px;
+        }
+        input {
+            width: 100%; padding: 14px 16px; background: rgba(7, 9, 19, 0.85); border: 1px solid var(--glass-border);
+            border-radius: 12px; color: #fff; font-size: 15px; margin-bottom: 15px; outline: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="/license-portal">🔐 Check License Key →</a>
+        </div>
+        <div class="header">
+            <h1>WhatsApp Pairing Portal</h1>
+            <p>Connect your session safely.</p>
+        </div>
+        <div>
+            <label>Custom Session Name</label>
+            <input type="text" id="custom-session-input" placeholder="e.g. sneha-vip-bot">
+            <label>Phone Number (+ Country Code)</label>
+            <input type="tel" id="phone-input" placeholder="e.g. 919876543210">
+            <button class="btn-primary" onclick="alert('Ready to wire up code request function!')">Request Pairing Code</button>
+        </div>
+    </div>
+</body>
+</html>
+ 

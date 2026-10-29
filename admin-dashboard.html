@@ -9,11 +9,10 @@
     <style>
         :root {
             --bg-deep: #050711;
-            --glass-bg: rgba(13, 17, 33, 0.85);
+            --glass-bg: rgba(13, 17, 33, 0.90);
             --glass-border: rgba(0, 229, 255, 0.3);
             --accent-cyan: #00e5ff;
             --accent-purple: #9d4edd;
-            --accent-glow: rgba(0, 229, 255, 0.2);
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --danger: #ff6b81;
@@ -25,7 +24,7 @@
             min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
         }
         .container {
-            width: 100%; max-width: 950px; background: var(--glass-bg); border: 1.5px solid var(--glass-border);
+            width: 100%; max-width: 1000px; background: var(--glass-bg); border: 1.5px solid var(--glass-border);
             backdrop-filter: blur(25px); border-radius: 30px; padding: 36px; box-shadow: 0 30px 60px rgba(0,0,0,0.8);
         }
         h1 { font-size: 26px; font-weight: 800; background: linear-gradient(135deg, #fff 30%, var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
@@ -39,49 +38,69 @@
         .btn-primary {
             width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
             border: none; border-radius: 12px; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
-            box-shadow: 0 5px 20px rgba(0,229,255,0.25);
+            box-shadow: 0 5px 20px rgba(0,229,255,0.25); transition: opacity 0.2s;
         }
-        .sap-table-wrap { overflow-x: auto; margin-top: 16px; max-height: 400px; border-radius: 12px; border: 1px solid var(--glass-border); }
+        .btn-primary:hover { opacity: 0.9; }
+        .sap-table-wrap { overflow-x: auto; margin-top: 16px; max-height: 420px; border-radius: 12px; border: 1px solid var(--glass-border); }
         table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-        th { background: rgba(0,229,255,0.1); color: var(--accent-cyan); padding: 12px; font-weight: 700; border-bottom: 1px solid var(--glass-border); }
-        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; }
-        .action-btn { padding: 4px 8px; border-radius: 6px; border: none; font-size: 11px; font-weight: 700; cursor: pointer; }
+        th { background: rgba(0,229,255,0.1); color: var(--accent-cyan); padding: 14px; font-weight: 700; border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; backdrop-filter: blur(10px); }
+        td { padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; }
+        .action-btn { padding: 6px 12px; border-radius: 6px; border: none; font-size: 11px; font-weight: 700; cursor: pointer; }
         .btn-delete { background: rgba(255,107,129,0.2); color: var(--danger); border: 1px solid rgba(255,107,129,0.4); }
+        .btn-delete:hover { background: rgba(255,107,129,0.4); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 14px; padding: 16px; }
+        .stat-card h4 { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+        .stat-card p { font-size: 22px; font-weight: 700; color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
 <body>
     <div class="container" id="admin-hub">
+        <!-- Login Box -->
         <div id="login-box">
-            <h1>🔒 Admin SAP Authentication • 🤍⃞𝄟ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓</h1>
+            <h1>🔒 Admin SAP Authentication</h1>
             <p class="subtitle">Enter your master admin password to access control panel.</p>
             <div class="input-group">
                 <label>Admin Secret Key</label>
-                <input type="password" id="admin-secret" placeholder="Enter master key...">
+                <input type="password" id="admin-secret" placeholder="Enter master key..." onkeypress="if(event.key === 'Enter') verifyAdmin()">
             </div>
             <button class="btn-primary" onclick="verifyAdmin()">Login to Dashboard</button>
         </div>
 
+        <!-- Dashboard Box -->
         <div id="dashboard-box" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
                 <div>
-                    <h1>SAP Control Center • 🤍⃞𝄟ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓</h1>
-                    <p class="subtitle">Manage, view, and revoke active customer license keys.</p>
+                    <h1>SAP Control Center • 🤍⃞ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓</h1>
+                    <p class="subtitle">Real-time database license & session monitoring.</p>
                 </div>
-                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="generateKey()">+ Generate Key</button>
+                <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="generateAdminKey()">+ Generate New Key</button>
             </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h4>Total Active Licenses</h4>
+                    <p id="stat-total">0</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Active Bot Sessions</h4>
+                    <p id="stat-sessions">0</p>
+                </div>
+            </div>
+
             <div class="sap-table-wrap">
                 <table>
                     <thead>
                         <tr>
                             <th>License Key</th>
-                            <th>Bound Phone / Session</th>
+                            <th>Bound Session</th>
                             <th>Expires At</th>
                             <th>Status</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="keys-table-body">
-                        <!-- Loaded dynamically -->
+                        <tr><td colspan="5" style="text-align:center; color: var(--text-muted);">Loading live keys...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -91,33 +110,108 @@
     <script>
         anime({ targets: '#admin-hub', opacity: [0, 1], translateY: [20, 0], duration: 800, easing: 'easeOutExpo' });
 
+        let currentAdminSecret = '';
+
         async function verifyAdmin() {
             const secret = document.getElementById('admin-secret').value.trim();
-            if (secret === 'binisha') {
-                document.getElementById('login-box').style.display = 'none';
-                document.getElementById('dashboard-box').style.display = 'block';
-                fetchKeys();
-            } else {
-                alert('Access Denied: Incorrect Admin Key!');
+            if (!secret) return alert('Please enter the admin key.');
+
+            try {
+                const res = await fetch('/api/admin/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ secret })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    currentAdminSecret = secret;
+                    document.getElementById('login-box').style.display = 'none';
+                    document.getElementById('dashboard-box').style.display = 'block';
+                    loadDashboardData();
+                } else {
+                    alert('Access Denied: Incorrect Admin Key!');
+                }
+            } catch (err) {
+                alert('Connection error verifying admin credentials.');
             }
         }
 
-        async function fetchKeys() {
-            const tbody = document.getElementById('keys-table-body');
-            tbody.innerHTML = `
-                <tr>
-                    <td>XYM-A8F2-99BC-11XA</td>
-                    <td>+919876543210 (sneha-vip-bot)</td>
-                    <td>2026-12-31</td>
-                    <td><span style="color:var(--success)">Active</span></td>
-                    <td><button class="action-btn btn-delete" onclick="alert('Revoked key!')">Revoke</button></td>
-                </tr>
-            `;
+        async function loadDashboardData() {
+            try {
+                const res = await fetch(`/api/admin/licenses?secret=${encodeURIComponent(currentAdminSecret)}`);
+                const data = await res.json();
+
+                if (data.success) {
+                    const tbody = document.getElementById('keys-table-body');
+                    tbody.innerHTML = '';
+
+                    document.getElementById('stat-total').innerText = data.licenses.length;
+                    document.getElementById('stat-sessions').innerText = data.activeSessionsCount || 0;
+
+                    if (data.licenses.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">No license keys found in database.</td></tr>`;
+                        return;
+                    }
+
+                    data.licenses.forEach(lic => {
+                        const isExpired = lic.expiresAt && new Date(lic.expiresAt) < new Date();
+                        const statusHtml = isExpired 
+                            ? `<span style="color:var(--danger)">Expired</span>` 
+                            : (lic.isActivated ? `<span style="color:var(--success)">Active & Bound</span>` : `<span style="color:var(--accent-cyan)">Unused</span>`);
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><code>${lic.key}</code></td>
+                            <td>${lic.boundSession || '<i>Unbound</i>'}</td>
+                            <td>${lic.expiresAt ? new Date(lic.expiresAt).toLocaleDateString() : 'Never'}</td>
+                            <td>${statusHtml}</td>
+                            <td><button class="action-btn btn-delete" onclick="revokeKey('${lic.key}')">Revoke</button></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load dashboard records', err);
+            }
         }
 
-        function generateKey() {
-            alert('New 30-day key successfully generated in database!');
-            fetchKeys();
+        async function generateAdminKey() {
+            try {
+                const res = await fetch('/api/admin/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ secret: currentAdminSecret })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(`New Key Generated: ${data.key}`);
+                    loadDashboardData();
+                } else {
+                    alert(data.error || 'Failed to generate key.');
+                }
+            } catch (err) {
+                alert('Connection error while generating key.');
+            }
+        }
+
+        async function revokeKey(key) {
+            if (!confirm(`Are you sure you want to revoke key ${key}?`)) return;
+            try {
+                const res = await fetch('/api/admin/revoke', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ secret: currentAdminSecret, key })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadDashboardData();
+                } else {
+                    alert(data.error || 'Failed to revoke key.');
+                }
+            } catch (err) {
+                alert('Connection error while revoking key.');
+            }
         }
     </script>
 </body>

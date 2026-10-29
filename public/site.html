@@ -189,6 +189,11 @@
             padding: 12px;
             border: 2px solid var(--ink-black);
             display: inline-block;
+            margin-top: 10px;
+        }
+        .qr-display img {
+            display: block;
+            margin: 0 auto;
         }
 
         #custom-alert {
@@ -233,7 +238,7 @@
     <div class="notebook-card" id="main-card">
         <div class="header">
             <h1>Notebook Pairing Log</h1>
-            <p>// handwritten session & bot linkage portal • 🤍⃞𝄟ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓</p>
+            <p>// handwritten session & bot linkage portal • 🤍⃞ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓</p>
         </div>
 
         <div class="tabs">
@@ -279,7 +284,7 @@
 
         <div class="footer-scribbles">
             <a onclick="crumpleTransition('/license-portal')">➔ Go to License Portal</a>
-            <span>[🤍⃞𝄟ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓]</span>
+            <span>[🤍⃞ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓]</span>
         </div>
     </div>
 
@@ -395,14 +400,32 @@
             resultBox.style.display = 'block';
             qrImgContainer.innerHTML = '<p style="font-family:Caveat; font-size:18px;">Drawing QR Stamp...</p>';
 
+            let attempts = 0;
             const interval = setInterval(async () => {
+                attempts++;
+                if (attempts > 25) { // 75 seconds timeout safeguard
+                    clearInterval(interval);
+                    qrImgContainer.innerHTML = '<p style="color:var(--accent-red); font-family:Caveat;">QR stamp timed out. Try again.</p>';
+                    submitBtn.innerText = "Render QR Stamp";
+                    submitBtn.disabled = false;
+                    return;
+                }
+
                 try {
                     const res = await fetch(`/status?id=${sessionId}`);
                     const data = await res.json();
                     if (data.status === 'waiting' && data.qr) {
                         clearInterval(interval);
                         qrImgContainer.innerHTML = '';
-                        new QRCode(qrImgContainer, { text: data.qr, width: 180, height: 180 });
+                        // Renders the QR image directly into the container using qrcode.js
+                        new QRCode(qrImgContainer, {
+                            text: data.qr,
+                            width: 180,
+                            height: 180,
+                            colorDark: "#1a1a1a",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
                         submitBtn.innerText = "Render QR Stamp";
                         submitBtn.disabled = false;
                     } else if (data.status === 'error') {

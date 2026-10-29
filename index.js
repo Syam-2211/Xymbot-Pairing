@@ -10,6 +10,7 @@ import makeWASocket, {
     Browsers
 } from '@whiskeysockets/baileys';
 import qrcode from 'qrcode';
+import { generateRandomKey, verifyLicense } from './licenseManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,7 +34,8 @@ const sessionSchema = new mongoose.Schema({
 const Session = mongoose.models.Session || mongoose.model('Session', sessionSchema);
 
 const licenseSchema = new mongoose.Schema({
-    key: { type: String, unique: true },
+    key: { type: String, unique: true, required: true },
+    createdAt: { type: Date, default: Date.now },
     expiresAt: Date,
     boundSession: { type: String, default: null }
 });
@@ -42,54 +44,68 @@ const License = mongoose.models.License || mongoose.model('License', licenseSche
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve public static assets (CSS, JS, images) from the 'public' directory
+// Serve public static assets
 app.use(express.static(path.join(__dirname, 'public')));
 
 const activePairings = new Map();
 
 // ─── PAGE ROUTING CONFIGURATION ────────────────────────────────────────────
-
-// 1. Public WhatsApp Pairing Portal
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'site.html'));
 });
 
-// 2. Public Client License Checker Page
 app.get('/license-portal', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'license.html'));
 });
 
-// 3. Secure Hidden Admin SAP Control Dashboard
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin-dashboard.html'));
 });
 
-// ─── LICENSE CHECK API ROUTE ───────────────────────────────────────────────
-app.post('/api/check-license', async (req, res) => {
+// ─── LICENSE API ENDPOINTS ─────────────────────────────────────────────────
+app.get('/api/verify-license', async (req, res) => {
     try {
-        const { licenseKey } = req.body;
-        if (!licenseKey) {
-            return res.status(400).json({ valid: false, error: 'License key is required.' });
+        const { key } = req.query;
+        if (!key) {
+            return res.json({ valid: false, message: 'License key is missing.' });
         }
 
-        const license = await License.findOne({ key: licenseKey });
+        const license = await License.findOne({ key: key.trim().toUpperCase() });
         if (!license) {
-            return res.json({ valid: false, error: 'Invalid license key.' });
+            return res.json({ valid: false, message: 'Invalid License Key.' });
         }
 
         const isExpired = license.expiresAt && new Date(license.expiresAt) < new Date();
         if (isExpired) {
-            return res.json({ valid: false, error: 'This license key has expired.' });
+            return res.json({ valid: false, message: 'License key has expired.' });
         }
 
-        return res.json({
-            valid: true,
-            expiresAt: license.expiresAt,
-            boundSession: license.boundSession || 'Unbound'
-        });
+        res.json({ valid: true, message: 'License verified successfully.', expiresAt: license.expiresAt });
     } catch (err) {
         console.error('License check error:', err);
-        res.status(500).json({ valid: false, error: 'Internal server error.' });
+        res.status(500).json({ valid: false, message: 'Internal server error.' });
+    }
+});
+
+app.post('/api/client-generate-key', async (req, res) => {
+    try {
+        if (!process.env.MONGO_URI || mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ error: 'MongoDB connection required to generate keys.' });
+        }
+
+        const key = generateRandomKey();
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days validity
+
+        await License.create({
+            key,
+            expiresAt,
+            boundSession: null
+        });
+
+        res.json({ success: true, key });
+    } catch (err) {
+        console.error('Key generation error:', err);
+        res.status(500).json({ error: 'Failed to generate license key.' });
     }
 });
 
@@ -160,7 +176,6 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
                     const detail = lastDisconnect?.error?.message || 'WhatsApp connection closed';
                     if (statusCode === 515 && restartCount < 3) {
                         restartCount += 1;
-                        console.log(`Restarting WhatsApp pairing session ${sessionId} after restart-required (515), attempt ${restartCount}/3`);
                         activePairings.set(sessionId, {
                             status: 'linking',
                             message: 'WhatsApp is restarting the pairing connection...'

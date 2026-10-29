@@ -37,6 +37,27 @@
             padding: 20px;
             overflow-x: hidden;
         }
+input {
+    width: 100%;
+    padding: 16px;
+    background: rgba(10, 14, 30, 0.95); /* Solid dark background */
+    border: 1.5px solid var(--accent-cyan); /* Bright cyan border for high visibility */
+    border-radius: 16px;
+    color: #fff;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+input::placeholder {
+    color: rgba(255, 255, 255, 0.4); /* Clear placeholder text */
+}
+
+input:focus {
+    border-color: #fff;
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+}
 
         .bg-glow {
             position: absolute;

@@ -3,106 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>License Key Verification Portal</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <title>Xymbot • Client License Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <style>
         :root {
-            --glass-bg: rgba(13, 17, 33, 0.65);
-            --glass-border: rgba(0, 229, 255, 0.25);
+            --bg-deep: #050711;
+            --glass-bg: rgba(13, 17, 33, 0.78);
+            --glass-border: rgba(0, 229, 255, 0.3);
             --accent-cyan: #00e5ff;
-            --accent-blue: #3d7eff;
-            --text-main: #f1f5f9;
+            --accent-purple: #9d4edd;
+            --text-main: #f8fafc;
             --text-muted: #94a3b8;
+            --danger: #ff6b81;
+            --success: #00f090;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: #070913; color: var(--text-main);
-            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+            font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-deep); color: var(--text-main);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
         }
         .container {
-            width: 100%; max-width: 480px; background: var(--glass-bg);
-            border: 1.5px solid var(--glass-border); backdrop-filter: blur(30px);
-            border-radius: 28px; padding: 38px 30px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+            width: 100%; max-width: 500px; background: var(--glass-bg); border: 1.5px solid var(--glass-border);
+            backdrop-filter: blur(25px); border-radius: 30px; padding: 36px; box-shadow: 0 30px 60px rgba(0,0,0,0.8);
         }
-        .nav-links { text-align: left; margin-bottom: 15px; }
-        .nav-links a { color: var(--accent-cyan); font-size: 12px; text-decoration: none; font-weight: 600; }
-        .header { text-align: center; margin-bottom: 24px; }
-        h1 { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+        .nav-link { font-size: 12px; font-weight: 600; color: var(--accent-cyan); text-decoration: none; display: inline-block; margin-bottom: 20px; }
+        h1 { font-size: 26px; font-weight: 800; background: linear-gradient(135deg, #fff 30%, var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
+        .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
         .input-group { margin-bottom: 16px; text-align: left; }
         .input-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
         input {
-            width: 100%; padding: 14px 16px; background: rgba(7, 9, 19, 0.85); border: 1px solid var(--glass-border);
-            border-radius: 12px; color: #fff; font-size: 15px; outline: none; font-family: 'JetBrains Mono', monospace;
+            width: 100%; padding: 14px; background: rgba(5,7,17,0.9); border: 1px solid var(--glass-border);
+            border-radius: 12px; color: #fff; font-size: 14px; outline: none; font-family: 'JetBrains Mono', monospace;
         }
         .btn-primary {
-            width: 100%; padding: 14px 20px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
-            border: none; border-radius: 12px; color: #070913; font-size: 15px; font-weight: 700; cursor: pointer;
+            width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border: none; border-radius: 12px; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,229,255,0.25);
         }
-        #result-box {
-            margin-top: 20px; padding: 16px; border-radius: 12px; background: rgba(0,0,0,0.4);
-            border: 1px solid var(--glass-border); display: none; font-size: 13px; line-height: 1.5; text-align: left;
-        }
-        .success { color: #00f090; font-weight: 700; }
-        .error { color: #ff6b81; font-weight: 700; }
+        .result-box { margin-top: 16px; padding: 16px; border-radius: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); display: none; font-size: 13px; }
+        .contact-box { display: flex; gap: 10px; margin-top: 20px; }
+        .contact-btn { flex: 1; padding: 12px; text-align: center; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 12px; color: #fff; text-decoration: none; font-weight: 600; font-size: 13px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="nav-links">
-            <a href="/">← Back to WhatsApp Pairing</a>
-        </div>
-        <div class="header">
-            <h1>License Status Checker</h1>
-            <p style="font-size: 13px; color: var(--text-muted);">Verify your subscription or bot license key validity.</p>
-        </div>
-
+    <div class="container" id="client-hub">
+        <a href="/" class="nav-link">← Back to Pairing Portal</a>
+        <h1>Client License Portal</h1>
+        <p class="subtitle">Verify your bot subscription status or contact the owner.</p>
+        
         <div class="input-group">
-            <label for="license-input">Enter License Key</label>
-            <input type="text" id="license-input" placeholder="XYM-XXXX-XXXX-XXXX">
+            <label>Enter License Key</label>
+            <input type="text" id="license-key-input" placeholder="XYM-XXXX-XXXX-XXXX">
         </div>
+        <button class="btn-primary" onclick="checkLicense()">Verify Status</button>
+        <div class="result-box" id="client-result"></div>
 
-        <button class="btn-primary" onclick="checkLicenseStatus()">Check Status</button>
-
-        <div id="result-box">
-            <div id="status-result-text"></div>
+        <div class="contact-box">
+            <a href="https://wa.me/919876543210" target="_blank" class="contact-btn">💬 WhatsApp Owner</a>
+            <a href="https://instagram.com/yourusername" target="_blank" class="contact-btn">📷 Instagram Support</a>
         </div>
     </div>
 
     <script>
-        async function checkLicenseStatus() {
-            const key = document.getElementById('license-input').value.trim();
-            const resultBox = document.getElementById('result-box');
-            const resultText = document.getElementById('status-result-text');
+        anime({ targets: '#client-hub', opacity: [0, 1], translateY: [20, 0], duration: 800, easing: 'easeOutExpo' });
 
-            if (!key) {
-                alert('Please enter a license key.');
-                return;
-            }
-
-            resultBox.style.display = 'block';
-            resultText.innerHTML = 'Checking license database...';
-
+        async function checkLicense() {
+            const key = document.getElementById('license-key-input').value.trim();
+            const box = document.getElementById('client-result');
+            if (!key) { alert('Enter a license key.'); return; }
+            box.style.display = 'block';
+            box.innerHTML = 'Checking database...';
+            
             try {
-                const response = await fetch('/api/check-license', {
+                const res = await fetch('/api/check-license', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ licenseKey: key })
                 });
-                const data = await response.json();
-
+                const data = await res.json();
                 if (data.valid) {
-                    resultText.innerHTML = `
-                        <span class="success">✅ License is Active!</span><br>
-                        <strong>Expires At:</strong> ${new Date(data.expiresAt).toLocaleString()}<br>
-                        <strong>Bound Session:</strong> ${data.boundSession}
-                    `;
+                    box.innerHTML = `<span style="color:var(--success)">✅ License Active</span><br><b>Expires:</b> ${new Date(data.expiresAt).toLocaleString()}<br><b>Bound Session:</b> ${data.boundSession}`;
                 } else {
-                    resultText.innerHTML = `<span class="error">❌ ${data.error || 'Invalid or expired license key.'}</span>`;
+                    box.innerHTML = `<span style="color:var(--danger)">❌ ${data.error || 'Invalid License'}</span>`;
                 }
-            } catch (err) {
-                resultText.innerHTML = `<span class="error">❌ Failed to connect to server.</span>`;
-            }
+            } catch (e) { box.innerHTML = `<span style="color:var(--danger)">❌ Connection error.</span>`; }
         }
     </script>
 </body>

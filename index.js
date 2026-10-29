@@ -43,19 +43,16 @@ const License = mongoose.models.License || mongoose.model('License', licenseSche
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve all static files (CSS, JS, images, etc.) from the 'public' folder automatically
+// Serve all static files from the 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
 const activePairings = new Map();
 
-// ─── ROUTES FOR MULTIPLE PAGES IN 'public' ─────────────────────────────────
-
-// 1. Pairing Portal Route (serves public/site.html)
+// ─── ROUTES FOR PAGES IN 'public' ──────────────────────────────────────────
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'site.html'));
 });
 
-// 2. License Management Page Route (serves public/license.html)
 app.get('/license-portal', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'license.html'));
 });
@@ -156,15 +153,58 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
                     const detail = lastDisconnect?.error?.message || 'WhatsApp connection closed';
                     if (statusCode === 515 && restartCount < 3) {
                         restartCount += 1;
-                        console.log(`Restarting WhatsApp pairing session ${sessionId} after restart-required (515), attempt ${restartCount}/3`); activePairings.set(sessionId, { status: 'linking', message: 'WhatsApp is restarting the pairing connection...' }); await saveCredentials; if (saveError) throw new Error('Could not save credentials before reconnecting'); await delay(250); if (!completed && currentSocket === socket) start(); return; }  const reason = statusCode ? ` (${statusCode})` : '';
-                    console.error(`Pairing session ${sessionId} closed${reason}:${detail}`);
+                        console.log(`Restarting WhatsApp pairing session ${sessionId} after restart-required (515), attempt ${restartCount}/3`);
+                        activePairings.set(sessionId, {
+                            status: 'linking',
+                            message: 'WhatsApp is restarting the pairing connection...'
+                        });
+                        await saveCredentials;
+                        if (saveError) throw new Error('Could not save credentials before reconnecting');
+                        await delay(250);
+                        if (!completed && currentSocket === socket) start();
+                        return;
+                    }
+
+                    const reason = statusCode ? ` (${statusCode})` : '';
+                    console.error(`Pairing session ${sessionId} closed${reason}: ${detail}`);
                     activePairings.set(sessionId, {
                         status: 'error',
-                        error: `Connection closed${reason}:${detail}`
+                        error: `Connection closed${reason}: ${detail}`
                     });
                 }
             } catch (error) {
-                console.error(`Pairing session ${sessionId} failed:`, error); const duplicateSessionName = error?.code === 11000; activePairings.set(sessionId, { status: 'error', error: duplicateSessionName ? 'This custom session name is already in use. Choose a different name and try again.' : error.message \vert{}\vert{} 'Failed to save or complete the WhatsApp session.' }); } });  return currentSocket; };  return start(); }  function normalizeSessionName(value) { if (typeof value !== 'string') return null; const name = value.trim().toLowerCase(); return /^[a-z0-9][a-z0-9_-]{2,39}$/.test(name) ? name : null; }  app.get('/pair', async (req, res) => { let phone = req.query.phone; if (!phone) return res.status(400).json({ error: 'Phone number is required' }); phone = phone.replace(/[^0-9]/g, ''); const sessionName = normalizeSessionName(req.query.custom); if (!sessionName) return res.status(400).json({ error: 'Enter a valid custom session name (3-40 alphanumeric chars).' });  const sessionId = 'session-' + Date.now(); const sessionFolder = `./tmp/${sessionId}`;
+                console.error(`Pairing session ${sessionId} failed:`, error);
+                const duplicateSessionName = error?.code === 11000;
+                activePairings.set(sessionId, {
+                    status: 'error',
+                    error: duplicateSessionName
+                        ? 'This custom session name is already in use. Choose a different name and try again.'
+                        : error.message || 'Failed to save or complete the WhatsApp session.'
+                });
+            }
+        });
+
+        return currentSocket;
+    };
+
+    return start();
+}
+
+function normalizeSessionName(value) {
+    if (typeof value !== 'string') return null;
+    const name = value.trim().toLowerCase();
+    return /^[a-z0-9][a-z0-9_-]{2,39}$/.test(name) ? name : null;
+}
+
+app.get('/pair', async (req, res) => {
+    let phone = req.query.phone;
+    if (!phone) return res.status(400).json({ error: 'Phone number is required' });
+    phone = phone.replace(/[^0-9]/g, '');
+    const sessionName = normalizeSessionName(req.query.custom);
+    if (!sessionName) return res.status(400).json({ error: 'Enter a valid custom session name (3-40 alphanumeric chars).' });
+
+    const sessionId = 'session-' + Date.now();
+    const sessionFolder = `./tmp/${sessionId}`;
     if (!fs.existsSync(sessionFolder)) fs.mkdirSync(sessionFolder, { recursive: true });
 
     activePairings.set(sessionId, { status: 'waiting' });
@@ -191,12 +231,23 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
             return res.json({ code, id: sessionId });
         }
     } catch (error) {
-        console.error(`Pairing failed for ${sessionId}:`, error); activePairings.set(sessionId, { status: 'error', error: error.message \vert{}\vert{} 'Failed to generate code.' }); return res.status(502).json({ error: activePairings.get(sessionId).error }); } });  app.get('/qr', async (req, res) => { const sessionName = normalizeSessionName(req.query.custom); if (!sessionName) return res.status(400).json({ error: 'Enter a valid custom session name.' });  const sessionId = 'session-' + Date.now(); const sessionFolder = `./tmp/${sessionId}`;
+        console.error(`Pairing failed for ${sessionId}:`, error);
+        activePairings.set(sessionId, { status: 'error', error: error.message || 'Failed to generate code.' });
+        return res.status(502).json({ error: activePairings.get(sessionId).error });
+    }
+});
+
+app.get('/qr', async (req, res) => {
+    const sessionName = normalizeSessionName(req.query.custom);
+    if (!sessionName) return res.status(400).json({ error: 'Enter a valid custom session name.' });
+
+    const sessionId = 'session-' + Date.now();
+    const sessionFolder = `./tmp/${sessionId}`;
     activePairings.set(sessionId, { status: 'waiting', qr: null });
 
     try {
         if (!process.env.MONGO_URI || mongoose.connection.readyState !== 1) {
-            return res.status(503).json({ error: 'MongoDB is project required.' });
+            return res.status(503).json({ error: 'MongoDB is required.' });
         }
         if (await Session.exists({ sessionName })) {
             return res.status(409).json({ error: 'Session name already exists.' });
@@ -204,7 +255,7 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
         if (!fs.existsSync(sessionFolder)) fs.mkdirSync(sessionFolder, { recursive: true });
         
         const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
-        startProviderSocket: startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr: true });
+        startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr: true });
 
         return res.status(202).json({ id: sessionId });
     } catch (error) {

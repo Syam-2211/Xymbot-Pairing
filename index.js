@@ -346,11 +346,31 @@ app.get('/qr', async (req, res) => {
     }
 });
 
-app.get('/status', (req, res) => {
-    const id = req.query.id;
-    if (!id || !activePairings.has(id)) return res.json({ status: 'not_found' });
-    res.json(activePairings.get(id));
+app.get('/api/admin/licenses', async (req, res) => {
+    const { secret } = req.query;
+    if (secret !== ADMIN_SECRET_KEY) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    try {
+        const licenses = await License.find({}).sort({ createdAt: -1 });
+        
+        // Count ONLY sessions that are bound to an active, non-expired license key
+        const activeSessionsCount = await License.countDocuments({
+            isActivated: true,
+            boundSession: { $ne: null },
+            $or: [
+                { expiresAt: { gt: new Date() } },
+                { expiresAt: null }
+            ]
+        });
+
+        res.json({ success: true, licenses, activeSessionsCount });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Database fetch error' });
+    }
 });
+
 
 app.listen(PORT, () => {
     console.log(`🌐 Server running live on port ${PORT}`);

@@ -3,60 +3,454 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊 & Xymbot • Pairing Portal</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <title>Xymbot • Premium SAP Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
-            --glass-bg: rgba(13, 17, 33, 0.65);
-            --glass-border: rgba(0, 229, 255, 0.25);
+            --bg-deep: #050711;
+            --glass-bg: rgba(13, 17, 33, 0.75);
+            --glass-border: rgba(0, 229, 255, 0.3);
             --accent-cyan: #00e5ff;
-            --accent-blue: #3d7eff;
-            --text-main: #f1f5f9;
+            --accent-purple: #9d4edd;
+            --text-main: #f8fafc;
             --text-muted: #94a3b8;
+            --success: #00f090;
+            --danger: #ff6b81;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: #070913; color: var(--text-main);
-            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px;
         }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .bg-glow {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            filter: blur(120px);
+            opacity: 0.15;
+            border-radius: 50%;
+            z-index: 0;
+        }
+
         .container {
-            width: 100%; max-width: 500px; background: var(--glass-bg);
-            border: 1.5px solid var(--glass-border); backdrop-filter: blur(30px);
-            border-radius: 28px; padding: 38px 30px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+            width: 100%;
+            max-width: 500px;
+            background: var(--glass-bg);
+            border: 1.5px solid var(--glass-border);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-radius: 32px;
+            padding: 40px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            z-index: 1;
+            position: relative;
         }
-        .nav-links { text-align: right; margin-bottom: 15px; }
-        .nav-links a { color: var(--accent-cyan); font-size: 12px; text-decoration: none; font-weight: 600; }
-        .header { text-align: center; margin-bottom: 26px; }
-        h1 { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 8px; }
-        .btn-primary {
-            width: 100%; padding: 14px 20px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
-            border: none; border-radius: 12px; color: #070913; font-weight: 700; cursor: pointer; margin-top: 10px;
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 32px;
+            line-height: 1.5;
+        }
+
+        .tabs {
+            display: flex;
+            background: rgba(5, 7, 17, 0.6);
+            border-radius: 16px;
+            padding: 6px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            border-radius: 12px;
+            z-index: 2;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+        }
+
+        .tab-slider {
+            position: absolute;
+            top: 6px;
+            bottom: 6px;
+            width: calc(50% - 6px);
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 12px;
+            z-index: 1;
+            transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            box-shadow: 0 4px 15px rgba(0, 229, 255, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
         input {
-            width: 100%; padding: 14px 16px; background: rgba(7, 9, 19, 0.85); border: 1px solid var(--glass-border);
-            border-radius: 12px; color: #fff; font-size: 15px; margin-bottom: 15px; outline: none;
+            width: 100%;
+            padding: 16px;
+            background: rgba(5, 7, 17, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        input:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.2);
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border: none;
+            border-radius: 16px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0, 229, 255, 0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin-bottom: 24px;
+        }
+
+        .btn-main:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(0, 229, 255, 0.4);
+        }
+
+        .result-box {
+            background: rgba(5, 7, 17, 0.8);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 32px;
+            text-align: center;
+            display: none;
+        }
+
+        .result-box h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .result-box p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .code-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            letter-spacing: 4px;
+            display: block;
+            margin-bottom: 24px;
+            text-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 16px;
+            border-radius: 16px;
+            border: 1px dashed rgba(0, 229, 255, 0.2);
+        }
+
+        .qr-display {
+            background: #fff;
+            padding: 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 24px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent-cyan);
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto 24px auto;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 32px;
+        }
+
+        .footer-link {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-link:hover {
+            color: #fff;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
+    <div class="bg-glow"></div>
+
     <div class="container">
-        <div class="nav-links">
-            <a href="/license-portal">🔐 Check License Key →</a>
-        </div>
         <div class="header">
             <h1>WhatsApp Pairing Portal</h1>
-            <p>Connect your session safely.</p>
+            <p>Connect your session safely and securely to the automated bot infrastructure.</p>
         </div>
-        <div>
-            <label>Custom Session Name</label>
-            <input type="text" id="custom-session-input" placeholder="e.g. sneha-vip-bot">
-            <label>Phone Number (+ Country Code)</label>
-            <input type="tel" id="phone-input" placeholder="e.g. 919876543210">
-            <button class="btn-primary" onclick="alert('Ready to wire up code request function!')">Request Pairing Code</button>
+
+        <div class="tabs">
+            <div class="tab-slider" id="slider"></div>
+            <button class="tab-btn active" onclick="switchTab('pair')">Pairing Code</button>
+            <button class="tab-btn" onclick="switchTab('qr')">QR Code</button>
+        </div>
+
+        <!-- Pairing Code Section -->
+        <div id="pair-content" class="tab-content active">
+            <form id="pair-form">
+                <div class="input-group">
+                    <label>Custom Session Name</label>
+                    <input type="text" id="pair-custom" placeholder="e.g. sneha-vip-bot" required>
+                </div>
+                <div class="input-group">
+                    <label>Phone Number (+ Country Code)</label>
+                    <input type="tel" id="pair-phone" placeholder="e.g. 919876543210" required>
+                </div>
+                <button type="submit" class="btn-main" id="pair-submit">Request Pairing Code</button>
+            </form>
+
+            <div id="pair-result" class="result-box">
+                <h3>Your Pairing Code</h3>
+                <p>Keep WhatsApp open. Enter this code on your device to link the session.</p>
+                <code class="code-display" id="pair-code">----</code>
+            </div>
+        </div>
+
+        <!-- QR Code Section -->
+        <div id="qr-content" class="tab-content">
+            <form id="qr-form">
+                <div class="input-group">
+                    <label>Custom Session Name</label>
+                    <input type="text" id="qr-custom" placeholder="e.g. sneha-vip-bot" required>
+                </div>
+                <button type="submit" class="btn-main" id="qr-submit">Generate QR Code</button>
+            </form>
+
+            <div id="qr-result" class="result-box">
+                <h3>Scan QR Code</h3>
+                <p>Go to Linked Devices in WhatsApp and scan the code below.</p>
+                <div class="qr-display" id="qr-code-img"></div>
+            </div>
+        </div>
+
+        <div class="footer-links">
+            <a href="/license-portal" class="footer-link">🔑 Check License Key</a>
+            <a href="/admin" class="footer-link">⚙️ Admin Control</a>
         </div>
     </div>
+
+    <script>
+        const slider = document.getElementById('slider');
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const contents = document.querySelectorAll('.tab-content');
+
+        function switchTab(type) {
+            tabBtns.forEach(btn => btn.classList.remove('active'));
+            contents.forEach(content => content.classList.remove('active'));
+
+            if (type === 'pair') {
+                slider.style.transform = 'translateX(0)';
+                tabBtns[0].classList.add('active');
+                document.getElementById('pair-content').classList.add('active');
+            } else {
+                slider.style.transform = 'translateX(100%)';
+                tabBtns[1].classList.add('active');
+                document.getElementById('qr-content').classList.add('active');
+            }
+
+            document.getElementById('pair-form').reset();
+            document.getElementById('qr-form').reset();
+            document.getElementById('pair-result').style.display = 'none';
+            document.getElementById('qr-result').style.display = 'none';
+        }
+
+        // Pairing Code Request Handler
+        document.getElementById('pair-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const phone = document.getElementById('pair-phone').value;
+            const custom = document.getElementById('pair-custom').value;
+            const submitBtn = document.getElementById('pair-submit');
+            const resultBox = document.getElementById('pair-result');
+
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Requesting...';
+
+            try {
+                const res = await fetch(`/pair?phone=${phone}&custom=${custom}`);
+                const data = await res.json();
+
+                if (data.code) {
+                    document.getElementById('pair-code').innerText = data.code;
+                    submitBtn.style.display = 'none';
+                    resultBox.style.display = 'block';
+
+                    anime({
+                        targets: resultBox,
+                        opacity: [0, 1],
+                        translateY: [20, 0],
+                        duration: 800,
+                        easing: 'easeOutExpo'
+                    });
+                } else {
+                    alert(data.error || 'Failed to generate code.');
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Request Pairing Code';
+                }
+            } catch (err) {
+                alert('Connection error.');
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Request Pairing Code';
+            }
+        });
+
+        // QR Code Request Handler
+        document.getElementById('qr-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const custom = document.getElementById('qr-custom').value;
+            const submitBtn = document.getElementById('qr-submit');
+            const resultBox = document.getElementById('qr-result');
+
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Initializing...';
+
+            try {
+                const res = await fetch(`/qr?custom=${custom}`);
+                const data = await res.json();
+
+                if (data.id) {
+                    submitBtn.style.display = 'none';
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Generate QR Code';
+                    pollSessionStatus(data.id);
+                } else {
+                    alert(data.error || 'Failed to initialize.');
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Generate QR Code';
+                }
+            } catch (err) {
+                alert('Connection error.');
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Generate QR Code';
+            }
+        });
+
+        async function pollSessionStatus(sessionId) {
+            const resultBox = document.getElementById('qr-result');
+            const qrImgContainer = document.getElementById('qr-code-img');
+            resultBox.style.display = 'block';
+            qrImgContainer.innerHTML = '<div class="loading-spinner"></div><p style="margin-bottom:0">Generating QR Code...</p>';
+            
+            anime({
+                targets: resultBox,
+                opacity: [0, 1],
+                translateY: [20, 0],
+                duration: 800,
+                easing: 'easeOutExpo'
+            });
+
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/status?id=${sessionId}`);
+                    const data = await res.json();
+
+                    if (data.status === 'waiting' && data.qr) {
+                        clearInterval(interval);
+                        qrImgContainer.innerHTML = '';
+                        new QRCode(qrImgContainer, {
+                            text: data.qr,
+                            width: 200,
+                            height: 200
+                        });
+                    } else if (data.status === 'error') {
+                        clearInterval(interval);
+                        qrImgContainer.innerHTML = `<p style="color:var(--danger)">❌ Error: ${data.error}</p>`;
+                    }
+                } catch (err) {
+                    console.error('Polling error', err);
+                }
+            }, 3000);
+        }
+    </script>
 </body>
 </html>
- 

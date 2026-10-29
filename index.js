@@ -43,18 +43,26 @@ const License = mongoose.models.License || mongoose.model('License', licenseSche
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve all static files from the 'public' folder
+// Serve public static assets (CSS, JS, images) from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 const activePairings = new Map();
 
-// ─── ROUTES FOR PAGES IN 'public' ──────────────────────────────────────────
+// ─── PAGE ROUTING CONFIGURATION ────────────────────────────────────────────
+
+// 1. Public WhatsApp Pairing Portal
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'site.html'));
 });
 
+// 2. Public Client License Checker Page
 app.get('/license-portal', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'license.html'));
+});
+
+// 3. Secure Hidden Admin SAP Control Dashboard (Outside 'public' folder)
+app.get('/admin-master-dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin-dashboard.html'));
 });
 
 // ─── LICENSE CHECK API ROUTE ───────────────────────────────────────────────

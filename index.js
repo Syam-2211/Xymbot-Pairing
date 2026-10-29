@@ -34,9 +34,11 @@ const sessionSchema = new mongoose.Schema({
 const Session = mongoose.models.Session || mongoose.model('Session', sessionSchema);
 
 const licenseSchema = new mongoose.Schema({
-    key: { type: String, unique: true, required: true },
+    key: { type: String, required: true, unique: true },
+    durationDays: { type: Number, required: true, default: 30 },
     createdAt: { type: Date, default: Date.now },
-    expiresAt: Date,
+    expiresAt: { type: Date, default: null },
+    isActivated: { type: Boolean, default: false },
     boundSession: { type: String, default: null }
 });
 const License = mongoose.models.License || mongoose.model('License', licenseSchema);
@@ -99,6 +101,7 @@ app.post('/api/client-generate-key', async (req, res) => {
         await License.create({
             key,
             expiresAt,
+            isActivated: false,
             boundSession: null
         });
 
@@ -106,6 +109,63 @@ app.post('/api/client-generate-key', async (req, res) => {
     } catch (err) {
         console.error('Key generation error:', err);
         res.status(500).json({ error: 'Failed to generate license key.' });
+    }
+});
+
+// ─── ADMIN SAP API ENDPOINTS ───────────────────────────────────────────────
+const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET || 'binisha';
+
+app.post('/api/admin/verify', (req, res) => {
+    const { secret } = req.body;
+    if (secret === ADMIN_SECRET_KEY) {
+        res.json({ success: true });
+    } else {
+        res.json({ success: false });
+    }
+});
+
+app.get('/api/admin/licenses', async (req, res) => {
+    const { secret } = req.query;
+    if (secret !== ADMIN_SECRET_KEY) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    try {
+        const licenses = await License.find({}).sort({ createdAt: -1 });
+        const activeSessionsCount = await Session.countDocuments({});
+        res.json({ success: true, licenses, activeSessionsCount });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Database fetch error' });
+    }
+});
+
+app.post('/api/admin/generate', async (req, res) => {
+    const { secret } = req.body;
+    if (secret !== ADMIN_SECRET_KEY) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    try {
+        const key = generateRandomKey();
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+        await License.create({ key, expiresAt, isActivated: false, boundSession: null });
+        res.json({ success: true, key });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to generate key' });
+    }
+});
+
+app.post('/api/admin/revoke', async (req, res) => {
+    const { secret, key } = req.body;
+    if (secret !== ADMIN_SECRET_KEY) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    try {
+        await License.deleteOne({ key });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to revoke key' });
     }
 });
 

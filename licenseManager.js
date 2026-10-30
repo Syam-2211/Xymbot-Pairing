@@ -7,7 +7,8 @@ const LicenseSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     expiresAt: { type: Date, default: null },
     isActivated: { type: Boolean, default: false },
-    boundSession: { type: String, default: null }
+    boundSession: { type: String, default: null },
+    issuedToTelegramId: { type: String, default: null }
 });
 
 const LicenseModel = mongoose.models.License || mongoose.model('License', LicenseSchema);
@@ -15,8 +16,26 @@ const LicenseModel = mongoose.models.License || mongoose.model('License', Licens
 export function generateRandomKey() {
     const p1 = crypto.randomBytes(4).toString('hex').toUpperCase();
     const p2 = crypto.randomBytes(4).toString('hex').toUpperCase();
-    const p3 = crypto.randomBytes(4).toString('hex').toUpperCase();
-    return `XYM-${p1}-${p2}-${p3}`;
+    return `XYM-${p1}-${p2}`;
+}
+
+// Client-facing generation remains disabled per your security rules
+export async function clientGenerateKey() {
+    throw new Error('Unauthorized: Client-side key generation is disabled.');
+}
+
+// Admin API to create keys programmatically
+export async function adminGenerateKey(durationDays = 30) {
+    const key = generateRandomKey();
+    const expiresAt = new Date(Date.now() + (durationDays * 24 * 60 * 60 * 1000));
+    
+    const newLicense = await LicenseModel.create({
+        key,
+        durationDays,
+        expiresAt,
+        isActivated: false
+    });
+    return newLicense;
 }
 
 export async function verifyLicense(key, sessionId) {
@@ -29,8 +48,6 @@ export async function verifyLicense(key, sessionId) {
         if (!license.isActivated) {
             license.isActivated = true;
             license.boundSession = sessionId;
-            const daysToMs = license.durationDays * 24 * 60 * 60 * 1000;
-            license.expiresAt = new Date(Date.now() + daysToMs);
             await license.save();
             return { valid: true, message: 'License activated and locked to session!' };
         }

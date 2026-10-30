@@ -232,17 +232,26 @@ app.get('/pair', async (req, res) => {
         const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
         const socket = startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr: false });
 
-        if (!socket.authState.creds.registered) {
-            if (typeof socket.waitForSocketOpen === 'function') {
-                await socket.waitForSocketOpen();
-            } else {
-                await delay(2000);
+        // Robust wait loop for WebSocket connection before requesting code
+        let retries = 20; // Wait up to 10 seconds
+        while (!socket.ws || socket.ws.readyState !== WebSocket.OPEN) {
+            if (retries <= 0) {
+                throw new Error('WebSocket connection timeout while opening pairing socket.');
             }
+            retries--;
+            await delay(500);
+        }
+
+        if (!socket.authState.creds.registered) {
+            await delay(1000); // Extra stabilization buffer
             const code = await socket.requestPairingCode(phone);
             activePairings.set(sessionId, { status: 'waiting', code });
             return res.json({ code, id: sessionId });
+        } else {
+            return res.status(400).json({ error: 'Session already registered.' });
         }
     } catch (error) {
+        console.error(`Pairing failed for ${sessionId}:`, error);
         activePairings.set(sessionId, { status: 'error', error: error.message || 'Failed to generate code.' });
         return res.status(502).json({ error: activePairings.get(sessionId).error });
     }

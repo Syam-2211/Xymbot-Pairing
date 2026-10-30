@@ -232,46 +232,61 @@ app.get('/pair', async (req, res) => {
         const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
         const socket = startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr: false });
 
-        // Safe delay buffer instead of checking WebSocket objects directly
-        await delay(2000); 
-
-        if (!socket.authState.creds.registered) {
-            const code = await socket.requestPairingCode(phone);
-            activePairings.set(sessionId, { status: 'waiting', code });
-            return res.json({ code, id: sessionId });
-        } else {
+        if (socket.authState.creds.registered) {
             return res.status(400).json({ error: 'Session already registered.' });
         }
+
+        // Wait dynamically for connection or open state via a Promise wrapper
+        const pairingCode = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Pairing code generation timed out waiting for connection.'));
+            }, 25000); // 25 second timeout
+
+            // Listen for socket updates to request the code safely once connected/ready
+            let codeRequested = false;
+
+            const handleUpdate = async (update) => {
+                const { connection } = update;
+                // Once connection establishes or socket is ready, request code if not already done
+                if (!codeRequested) {
+                    codeRequested = true;
+                    try {
+                        await delay(1500); // Brief buffer for socket stability
+                        const code = await socket.requestPairingCode(phone);
+                        clearTimeout(timeout);
+                        socket.ev.off('connection.update', handleUpdate);
+                        resolve(code);
+                    } catch (err) {
+                        clearTimeout(timeout);
+                        socket.ev.off('connection.update', handleUpdate);
+                        reject(err);
+                    }
+                }
+            };
+
+            // Alternatively, if connection.update doesn't trigger immediately, 
+            // trigger after a safe connection attempt check
+            setTimeout(async () => {
+                if (!codeRequested) {
+                    try {
+                        codeRequested = true;
+                        const code = await socket.requestPairingCode(phone);
+                        clearTimeout(timeout);
+                        resolve(code);
+                    } catch (err) {
+                        // If it fails here, let it try or fallback
+                    }
+                }
+            }, 4000); 
+        });
+
+        activePairings.set(sessionId, { status: 'waiting', code: pairingCode });
+        return res.json({ code: pairingCode, id: sessionId });
+
     } catch (error) {
         console.error(`Pairing failed for ${sessionId}:`, error);
         activePairings.set(sessionId, { status: 'error', error: error.message || 'Failed to generate code.' });
         return res.status(502).json({ error: activePairings.get(sessionId).error });
-    }
-});
-
-app.get('/qr', async (req, res) => {
-    const sessionName = normalizeSessionName(req.query.custom);
-    if (!sessionName) return res.status(400).json({ error: 'Enter a valid custom session name.' });
-
-    const sessionId = 'session-' + Date.now();
-    const sessionFolder = `./tmp/${sessionId}`;
-    activePairings.set(sessionId, { status: 'waiting', qr: null });
-
-    try {
-        if (!process.env.MONGO_URI || mongoose.connection.readyState !== 1) {
-            return res.status(503).json({ error: 'MongoDB is required.' });
-        }
-        if (await Session.exists({ sessionName })) {
-            return res.status(409).json({ error: 'Session name already exists.' });
-        }
-        if (!fs.existsSync(sessionFolder)) fs.mkdirSync(sessionFolder, { recursive: true });
-        
-        const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
-        startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr: true });
-
-        return res.status(202).json({ id: sessionId });
-    } catch (error) {
-        return res.status(500).json({ error: 'Failed to initialize QR session.' });
     }
 });
 

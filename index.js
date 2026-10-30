@@ -10,7 +10,7 @@ import makeWASocket, {
     Browsers
 } from '@whiskeysockets/baileys';
 import qrcode from 'qrcode';
-import { generateRandomKey, verifyLicense } from './licenseManager.js';
+import { verifyLicense, generateRandomKey } from './licenseManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,10 +34,9 @@ const sessionSchema = new mongoose.Schema({
 const Session = mongoose.models.Session || mongoose.model('Session', sessionSchema);
 
 const licenseSchema = new mongoose.Schema({
-    key: { type: String, required: true, unique: true },
-    durationDays: { type: Number, required: true, default: 30 },
-    createdAt: { type: Date, default: Date.now },
-    expiresAt: { type: Date, default: null },
+    key: { type: String, unique: true },
+    durationDays: { type: Number, default: 30 },
+    expiresAt: Date,
     isActivated: { type: Boolean, default: false },
     boundSession: { type: String, default: null }
 });
@@ -45,13 +44,11 @@ const License = mongoose.models.License || mongoose.model('License', licenseSche
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Serve public static assets
 app.use(express.static(path.join(__dirname, 'public')));
 
 const activePairings = new Map();
 
-// ─── PAGE ROUTING CONFIGURATION ────────────────────────────────────────────
+// ─── PAGE ROUTES ───────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'site.html'));
 });
@@ -64,134 +61,65 @@ app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin-dashboard.html'));
 });
 
-// ─── LICENSE API ENDPOINTS ─────────────────────────────────────────────────
+// ─── API ENDPOINTS ─────────────────────────────────────────────────────────
+
+// Verify License Key Route
 app.get('/api/verify-license', async (req, res) => {
     try {
-        const { key } = req.query;
-        if (!key) {
-            return res.json({ valid: false, message: 'License key is missing.' });
-        }
-
-        const license = await License.findOne({ key: key.trim().toUpperCase() });
-        if (!license) {
-            return res.json({ valid: false, message: 'Invalid License Key.' });
-        }
-
-        const isExpired = license.expiresAt && new Date(license.expiresAt) < new Date();
-        if (isExpired) {
-            return res.json({ valid: false, message: 'License key has expired.' });
-        }
-
-        res.json({ valid: true, message: 'License verified successfully.', expiresAt: license.expiresAt });
+        const key = req.query.key;
+        if (!key) return res.status(400).json({ valid: false, message: 'License key is required.' });
+        
+        const result = await verifyLicense(key, 'general-check');
+        return res.json({ valid: result.valid, message: result.message });
     } catch (err) {
-        console.error('License check error:', err);
+        console.error('Verify error:', err);
         res.status(500).json({ valid: false, message: 'Internal server error.' });
     }
 });
 
+// Client Key Generation Route
 app.post('/api/client-generate-key', async (req, res) => {
     try {
-        if (!process.env.MONGO_URI || mongoose.connection.readyState !== 1) {
-            return res.status(503).json({ error: 'MongoDB connection required to generate keys.' });
-        }
-
-        const key = generateRandomKey();
-        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days validity
-
-        await License.create({
-            key,
-            expiresAt,
-            isActivated: false,
-            boundSession: null
-        });
-
-        res.json({ success: true, key });
+        const newKey = generateRandomKey();
+        await License.create({ key: newKey, durationDays: 30, isActivated: false });
+        return res.json({ key: newKey });
     } catch (err) {
-        console.error('Key generation error:', err);
-        res.status(500).json({ error: 'Failed to generate license key.' });
+        return res.status(400).json({ error: 'Failed to generate license key.' });
     }
 });
 
-// ─── ADMIN SAP API ENDPOINTS ───────────────────────────────────────────────
-const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET || 'binisha';
-
-app.post('/api/admin/verify', (req, res) => {
-    const { secret } = req.body;
-    if (secret === ADMIN_SECRET_KEY) {
-        res.json({ success: true });
-    } else {
-        res.json({ success: false });
-    }
-});
-
-app.get('/api/admin/licenses', async (req, res) => {
-    const { secret } = req.query;
-    if (secret !== ADMIN_SECRET_KEY) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-
+// Admin API to fetch all keys
+app.get('/api/admin/keys', async (req, res) => {
     try {
-        const licenses = await License.find({}).sort({ createdAt: -1 });
-        const activeSessionsCount = await License.countDocuments({
-            isActivated: true,
-            boundSession: { $ne: null },
-            $or: [
-                { expiresAt: { $gt: new Date() } },
-                { expiresAt: null }
-            ]
-        });
-
-        res.json({ success: true, licenses, activeSessionsCount });
+        const keys = await License.find().sort({ createdAt: -1 });
+        res.json({ keys });
     } catch (err) {
-        res.status(500).json({ success: false, error: 'Database fetch error' });
+        res.status(500).json({ error: 'Failed to fetch keys' });
     }
 });
 
+// Admin API to generate key
 app.post('/api/admin/generate', async (req, res) => {
-    const { secret } = req.body;
-    if (secret !== ADMIN_SECRET_KEY) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-
     try {
-        const key = generateRandomKey();
-        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        await License.create({ key, expiresAt, isActivated: false, boundSession: null });
-        res.json({ success: true, key });
+        const newKey = generateRandomKey();
+        const license = await License.create({ key: newKey, durationDays: 30 });
+        res.json({ success: true, license });
     } catch (err) {
-        res.status(500).json({ success: false, error: 'Failed to generate key' });
+        res.status(500).json({ error: 'Failed to create key' });
     }
 });
 
-app.post('/api/admin/revoke', async (req, res) => {
-    const { secret, key } = req.body;
-    if (secret !== ADMIN_SECRET_KEY) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-
+// Admin API to revoke key
+app.delete('/api/admin/revoke/:id', async (req, res) => {
     try {
-        await License.deleteOne({ key });
+        await License.findByIdAndDelete(req.params.id);
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ success: false, error: 'Failed to revoke key' });
+        res.status(500).json({ error: 'Failed to revoke key' });
     }
 });
 
-app.post('/api/admin/delete-all', async (req, res) => {
-    const { secret } = req.body;
-    if (secret !== ADMIN_SECRET_KEY) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-
-    try {
-        await License.deleteMany({});
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false, error: 'Failed to clear licenses' });
-    }
-});
-
-// ─── ROBUST WHATSAPP PAIRING & QR SOCKET HELPER ────────────────────────────
+// ─── WHATSAPP PAIRING LOGIC ────────────────────────────────────────────────
 function startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr }) {
     let socket;
     let restartCount = 0;
@@ -203,10 +131,9 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
         socket = makeWASocket({
             auth: state,
             printQRInTerminal: false,
-            logger: pino({ level: 'silent' }),
-            browser: Browsers.appropriate('Chrome'),
+            logger: pino({ level: 'warn' }),
+            browser: Browsers.windows('Desktop'),
             syncFullHistory: false,
-            markOnlineOnConnect: false,
         });
 
         const currentSocket = socket;
@@ -221,12 +148,10 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
             const { connection, qr, lastDisconnect } = update;
             try {
                 if (currentSocket !== socket || completed) return;
-                
                 if (qr && generateQr) {
                     const qrDataUrl = await qrcode.toDataURL(qr);
                     activePairings.set(sessionId, { status: 'waiting', qr: qrDataUrl });
                 }
-
                 if (connection === 'open') {
                     await saveCredentials;
                     if (saveError) throw new Error('Could not save WhatsApp session credentials');
@@ -245,34 +170,11 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
                     if (!process.env.MONGO_URI || mongoose.connection.readyState !== 1) {
                         throw new Error('MongoDB is required to save named pairing sessions.');
                     }
-                    
                     await Session.create({
                         sessionId: finalSessionId,
                         sessionName,
                         sessionData: base64Session
                     });
-
-                    // ─── SEND WELCOME & SESSION MESSAGE TO OWNER ────────────────────
-                                        try {
-                        const botNumber = currentSocket.user.id.split(':')[0] + '@s.whatsapp.net';
-                        const welcomeMessage = 
-                            `┏ ⧉ *XYMBOT / SNEHABOT CONNECTED* ⧉\n` +
-                            `┃ ✨ *Status:* Successfully Linked & Paired!\n` +
-                            `┃ 📁 *Session Name:* \`${sessionName}\`\n` +
-                            `┗━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-                            `👇 *Tap below to copy your session string:* \n` +
-                            `\`\`\`${finalSessionId}\`\`\`\n\n` +
-                            `⚠️ *Security Warning:* Never share your session string with anyone!\n` +
-                            `👑 *Owner / Support:* Contact owner on Instagram for help.\n` +
-                            `🍓 *Powered by 🤍⃞ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓 & 🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊*`;
-
-                        await currentSocket.sendMessage(botNumber, { text: welcomeMessage });
-                        console.log(`✅ Welcome success message sent for session: ${sessionName}`);
-                    } catch (msgErr) {
-                        console.error('Failed to send welcome message to WhatsApp:', msgErr);
-                                        }
-                    
-                    // ────────────────────────────────────────────────────────────────
 
                     completed = true;
                     activePairings.set(sessionId, { status: 'connected', sessionName });
@@ -282,36 +184,21 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
                     if (activePairings.get(sessionId)?.status === 'connected') return;
                     const statusCode = lastDisconnect?.error?.output?.statusCode;
                     const detail = lastDisconnect?.error?.message || 'WhatsApp connection closed';
-                    
                     if (statusCode === 515 && restartCount < 3) {
                         restartCount += 1;
-                        activePairings.set(sessionId, {
-                            status: 'linking',
-                            message: 'Reconnecting pairing socket...'
-                        });
+                        activePairings.set(sessionId, { status: 'linking', message: 'Restarting connection...' });
                         await saveCredentials;
-                        await delay(500);
                         if (!completed && currentSocket === socket) start();
                         return;
                     }
-
-                    activePairings.set(sessionId, {
-                        status: 'error',
-                        error: `Connection closed (${statusCode || 'Unknown'}): ${detail}`
-                    });
+                    activePairings.set(sessionId, { status: 'error', error: `Connection closed: ${detail}` });
                 }
             } catch (error) {
-                console.error(`Pairing session ${sessionId} failed:`, error);
-                activePairings.set(sessionId, {
-                    status: 'error',
-                    error: error.code === 11000 ? 'Session name already exists.' : error.message
-                });
+                activePairings.set(sessionId, { status: 'error', error: error.message || 'Failed to complete session.' });
             }
         });
-
         return currentSocket;
     };
-
     return start();
 }
 
@@ -343,35 +230,21 @@ app.get('/pair', async (req, res) => {
         }
 
         const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
-        const socket = startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds });
+        const socket = startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr: false });
 
-        // Non-blocking async code request to avoid HTTP gateway timeouts
-        (async () => {
-            try {
-                let retries = 0;
-                while (!socket.ws || socket.ws.readyState !== 1) {
-                    retries++;
-                    if (retries > 20) throw new Error('Socket connection timeout.');
-                    await delay(1000);
-                }
+        if (!socket.authState.creds.registered) {
+            if (typeof socket.waitForSocketOpen === 'function') {
+                await socket.waitForSocketOpen();
+            } else {
                 await delay(2000);
-
-                if (!socket.authState.creds.registered) {
-                    const code = await socket.requestPairingCode(phone);
-                    const formattedCode = code.match(/.{1,4}/g)?.join('-') || code;
-                    activePairings.set(sessionId, { status: 'waiting', code: formattedCode });
-                }
-            } catch (err) {
-                console.error(`Async pairing error for ${sessionId}:`, err);
-                activePairings.set(sessionId, { status: 'error', error: err.message || 'Failed to generate code.' });
             }
-        })();
-
-        return res.json({ id: sessionId });
+            const code = await socket.requestPairingCode(phone);
+            activePairings.set(sessionId, { status: 'waiting', code });
+            return res.json({ code, id: sessionId });
+        }
     } catch (error) {
-        console.error(`Pairing failed for ${sessionId}:`, error);
-        activePairings.set(sessionId, { status: 'error', error: error.message });
-        return res.status(500).json({ error: error.message || 'Failed to initialize pairing.' });
+        activePairings.set(sessionId, { status: 'error', error: error.message || 'Failed to generate code.' });
+        return res.status(502).json({ error: activePairings.get(sessionId).error });
     }
 });
 
@@ -397,7 +270,6 @@ app.get('/qr', async (req, res) => {
 
         return res.status(202).json({ id: sessionId });
     } catch (error) {
-        activePairings.set(sessionId, { status: 'error', error: 'Failed to initialize QR session.' });
         return res.status(500).json({ error: 'Failed to initialize QR session.' });
     }
 });
@@ -410,4 +282,4 @@ app.get('/status', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`🌐 Server running live on port ${PORT}`);
-});
+}); 

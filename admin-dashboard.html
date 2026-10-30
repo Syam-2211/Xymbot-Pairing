@@ -4,48 +4,103 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xymbot • SAP Admin Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <style>
         :root {
-            --bg-deep: #050711;
-            --glass-bg: rgba(13, 17, 33, 0.85);
-            --glass-border: rgba(0, 229, 255, 0.3);
-            --accent-cyan: #00e5ff;
-            --accent-purple: #9d4edd;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --danger: #ff6b81;
-            --success: #00f090;
+            --paper-bg: #f4f1ea;
+            --paper-line: #d3c9b1;
+            --paper-sheet: #fffdf9;
+            --ink-blue: #1b3b6f;
+            --ink-black: #1a1a1a;
+            --accent-red: #c0392b;
+            --pencil: #7f8c8d;
+            --text-muted: #7f8c8d;
+            --success: #317a4c;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-deep); color: var(--text-main);
-            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+            font-family: 'Special Elite', monospace;
+            background-color: var(--paper-bg);
+            background-image: linear-gradient(to right, var(--paper-line) 1px, transparent 1px), linear-gradient(to bottom, var(--paper-line) 1px, transparent 1px);
+            background-size: 24px 24px;
+            color: var(--ink-black);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
         }
         .container {
-            width: 100%; max-width: 950px; background: var(--glass-bg); border: 1.5px solid var(--glass-border);
-            backdrop-filter: blur(25px); border-radius: 30px; padding: 36px; box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+            width: 100%;
+            max-width: 1000px;
+            padding: 38px 36px 36px 64px;
+            background: var(--paper-sheet);
+            border: 2px dashed #b5a88c;
+            box-shadow: 8px 12px 0 rgba(0, 0, 0, 0.12);
+            position: relative;
+            transform: rotate(-0.2deg);
         }
-        h1 { font-size: 26px; font-weight: 800; background: linear-gradient(135deg, #fff 30%, var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
-        .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 44px;
+            width: 2px;
+            background: rgba(192, 57, 43, 0.3);
+        }
+        h1 {
+            color: var(--ink-blue);
+            font: 700 28px 'Kalam', cursive;
+            margin-bottom: 6px;
+        }
+        .subtitle {
+            color: var(--pencil);
+            font: 600 19px 'Caveat', cursive;
+            margin-bottom: 24px;
+        }
         .input-group { margin-bottom: 16px; text-align: left; }
-        .input-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+        .input-group label {
+            display: block;
+            color: var(--ink-blue);
+            font: 700 15px 'Kalam', cursive;
+            margin-bottom: 6px;
+        }
         input {
-            width: 100%; padding: 14px; background: rgba(5,7,17,0.9); border: 1px solid var(--glass-border);
-            border-radius: 12px; color: #fff; font-size: 14px; outline: none; font-family: 'JetBrains Mono', monospace;
+            width: 100%;
+            padding: 12px 8px;
+            background: transparent;
+            border: 0;
+            border-bottom: 2px solid var(--ink-black);
+            color: var(--ink-blue);
+            font: 16px 'Special Elite', monospace;
+            outline: none;
         }
+        input:focus { border-bottom-color: var(--ink-blue); }
         .btn-primary {
-            width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-            border: none; border-radius: 12px; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
-            box-shadow: 0 5px 20px rgba(0,229,255,0.25);
+            padding: 12px 18px;
+            background: var(--ink-blue);
+            border: 2px solid var(--ink-black);
+            color: #fff;
+            font: 700 17px 'Kalam', cursive;
+            cursor: pointer;
+            box-shadow: 4px 4px 0 var(--ink-black);
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
         }
-        .sap-table-wrap { overflow-x: auto; margin-top: 16px; max-height: 400px; border-radius: 12px; border: 1px solid var(--glass-border); }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-        th { background: rgba(0,229,255,0.1); color: var(--accent-cyan); padding: 12px; font-weight: 700; border-bottom: 1px solid var(--glass-border); }
-        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; }
-        .action-btn { padding: 4px 8px; border-radius: 6px; border: none; font-size: 11px; font-weight: 700; cursor: pointer; }
-        .btn-delete { background: rgba(255,107,129,0.2); color: var(--danger); border: 1px solid rgba(255,107,129,0.4); }
+        .btn-primary:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink-black); }
+        .sap-table-wrap { overflow-x: auto; margin-top: 16px; max-height: 60vh; border: 1px dashed #b5a88c; background: #fffefa; }
+        table { width: 100%; min-width: 700px; border-collapse: collapse; text-align: left; font-size: 13px; }
+        th { background: #f0ece1; color: var(--ink-blue); padding: 12px; font: 700 15px 'Kalam', cursive; border-bottom: 2px solid var(--paper-line); }
+        td { padding: 12px; color: var(--ink-black); border-bottom: 1px solid #e8e1d3; font: 13px 'Special Elite', monospace; }
+        .action-btn { padding: 5px 9px; border: 1px solid var(--accent-red); background: #fff8f5; color: var(--accent-red); font: 700 13px 'Kalam', cursive; cursor: pointer; }
+        @media (max-width: 640px) {
+            body { align-items: flex-start; padding: 14px; }
+            .container { padding: 30px 18px 24px 42px; }
+            .container::before { left: 28px; }
+            #dashboard-box > div:first-child { align-items: flex-start !important; flex-direction: column; }
+            #dashboard-box > div:first-child .btn-primary { width: 100% !important; }
+        }
     </style>
 </head>
 <body>

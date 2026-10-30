@@ -127,6 +127,10 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
     let saveError;
 
     const start = () => {
+        activePairings.set(sessionId, {
+            status: restartCount ? 'linking' : 'connecting',
+            message: restartCount ? 'Reconnecting to WhatsApp...' : 'Connecting to WhatsApp...'
+        });
         socket = makeWASocket({
             auth: state,
             printQRInTerminal: false,
@@ -148,9 +152,17 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
                 if (currentSocket !== socket || completed) return;
                 if (qr && generateQr) {
                     const qrDataUrl = await qrcode.toDataURL(qr);
-                    activePairings.set(sessionId, { status: 'waiting', qr: qrDataUrl });
+                    activePairings.set(sessionId, {
+                        status: 'waiting',
+                        qr: qrDataUrl,
+                        message: 'Scan the QR code with WhatsApp to connect.'
+                    });
                 }
                 if (connection === 'open') {
+                    activePairings.set(sessionId, {
+                        status: 'linking',
+                        message: 'WhatsApp linked. Saving your session...'
+                    });
                     await saveCredentials;
                     if (saveError) throw new Error('Could not save WhatsApp session credentials');
                     await delay(3000);
@@ -184,7 +196,10 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
                     const detail = lastDisconnect?.error?.message || 'WhatsApp connection closed';
                     if (statusCode === 515 && restartCount < 3) {
                         restartCount += 1;
-                        activePairings.set(sessionId, { status: 'linking', message: 'Restarting connection...' });
+                        activePairings.set(sessionId, {
+                            status: 'linking',
+                            message: 'WhatsApp is restarting the connection...'
+                        });
                         await saveCredentials;
                         if (!completed && currentSocket === socket) start();
                         return;
@@ -278,7 +293,11 @@ app.get('/pair', async (req, res) => {
             }, 4000); 
         });
 
-        activePairings.set(sessionId, { status: 'waiting', code: pairingCode });
+        activePairings.set(sessionId, {
+            status: 'waiting',
+            code: pairingCode,
+            message: 'Enter the code in WhatsApp and keep this page open.'
+        });
         return res.json({ code: pairingCode, id: sessionId });
 
     } catch (error) {

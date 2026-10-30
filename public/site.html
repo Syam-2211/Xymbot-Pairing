@@ -172,6 +172,39 @@
             display: none;
         }
 
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 14px;
+            padding: 12px 14px;
+            border: 1px solid var(--paper-line);
+            background: #fffdf9;
+            color: var(--ink-blue);
+            font-family: 'Kalam', cursive;
+            font-size: 16px;
+            line-height: 1.35;
+            text-align: left;
+        }
+        .connection-status[hidden] { display: none; }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            flex: 0 0 10px;
+            border-radius: 50%;
+            background: var(--pencil);
+        }
+        .connection-status[data-state="connecting"] .status-dot,
+        .connection-status[data-state="linking"] .status-dot {
+            background: #d98b20;
+            animation: status-pulse 1.2s ease-in-out infinite;
+        }
+        .connection-status[data-state="connected"] .status-dot { background: #30834a; }
+        .connection-status[data-state="error"] .status-dot { background: var(--accent-red); }
+        @keyframes status-pulse {
+            50% { opacity: 0.35; transform: scale(0.82); }
+        }
+
         .code-display {
             font-family: 'Special Elite', monospace;
             font-size: 28px;
@@ -265,6 +298,10 @@
                 <p style="font-family:'Caveat'; font-size:18px; color:var(--pencil)">Copy this into your WhatsApp linked devices:</p>
                 <code class="code-display" id="pair-code">----</code>
             </div>
+            <div class="connection-status" id="pair-status" role="status" aria-live="polite" hidden>
+                <span class="status-dot" aria-hidden="true"></span>
+                <span class="status-message"></span>
+            </div>
         </div>
 
         <div id="qr-content" class="tab-content">
@@ -280,6 +317,10 @@
                 <h3 style="font-family:'Kalam'; color:var(--ink-blue)">Scan Paper QR:</h3>
                 <p style="font-family:'Caveat'; font-size:18px; color:var(--pencil)">Point phone camera to scan configuration code.</p>
                 <div class="qr-display" id="qr-code-img"></div>
+            </div>
+            <div class="connection-status" id="qr-status" role="status" aria-live="polite" hidden>
+                <span class="status-dot" aria-hidden="true"></span>
+                <span class="status-message"></span>
             </div>
         </div>
 
@@ -322,6 +363,12 @@
             anime({ targets: alertBox, opacity: [1, 0], duration: 200, easing: 'easeInQuad', complete: () => alertBox.style.display = 'none' });
         }
 
+        function updateConnectionStatus(element, status, message) {
+            element.dataset.state = status;
+            element.querySelector('.status-message').textContent = message;
+            element.hidden = false;
+        }
+
         function crumpleTransition(targetUrl) {
             const overlay = document.getElementById('crumple-overlay');
             overlay.style.display = 'block';
@@ -347,123 +394,132 @@
             const custom = document.getElementById('pair-custom').value;
             const resultBox = document.getElementById('pair-result');
             const submitBtn = document.getElementById('pair-submit-btn');
+            const statusEl = document.getElementById('pair-status');
 
             submitBtn.innerText = "Stamping Code...";
             submitBtn.disabled = true;
+            updateConnectionStatus(statusEl, 'connecting', 'Connecting to WhatsApp...');
 
             try {
-                const res = await fetch(`/pair?phone=${phone}&custom=${custom}`);
+                const params = new URLSearchParams({ phone, custom });
+                const res = await fetch(`/pair?${params}`);
                 const data = await res.json();
                 if (data.id) {
-                    pollPairingCodeStatus(data.id, submitBtn, resultBox);
+                    if (data.code) {
+                        document.getElementById('pair-code').innerText = data.code;
+                        resultBox.style.display = 'block';
+                    }
+                    pollPairingCodeStatus(data.id, submitBtn, resultBox, statusEl);
                 } else {
                     showAlert("Generation Error", data.error || 'Failed to initialize session.');
+                    updateConnectionStatus(statusEl, 'error', data.error || 'Failed to initialize session.');
                     submitBtn.innerText = "Stamp & Generate Code";
                     submitBtn.disabled = false;
                 }
             } catch (err) {
                 showAlert("Connection Error", "Could not reach server endpoints.");
+                updateConnectionStatus(statusEl, 'error', 'Could not reach the pairing server.');
                 submitBtn.innerText = "Stamp & Generate Code";
                 submitBtn.disabled = false;
             }
         });
 
-        async function pollPairingCodeStatus(sessionId, submitBtn, resultBox) {
-            let attempts = 0;
+        async function pollPairingCodeStatus(sessionId, submitBtn, resultBox, statusEl) {
+            let codeDisplayed = document.getElementById('pair-code').textContent !== '----';
             const interval = setInterval(async () => {
-                attempts++;
-                if (attempts > 30) {
-                    clearInterval(interval);
-                    showAlert("Timeout", "Pairing code generation took too long.");
-                    submitBtn.innerText = "Stamp & Generate Code";
-                    submitBtn.disabled = false;
-                    return;
-                }
-
                 try {
                     const res = await fetch(`/status?id=${sessionId}`);
                     const data = await res.json();
-                    if (data.code) {
-                        clearInterval(interval);
+                    if (data.code && !codeDisplayed) {
+                        codeDisplayed = true;
                         document.getElementById('pair-code').innerText = data.code;
                         resultBox.style.display = 'block';
                         anime({ targets: resultBox, scale: [0.9, 1], opacity: [0, 1], duration: 500 });
-                        showAlert("Success!", "Pairing code generated successfully.");
+                    }
+                    updateConnectionStatus(statusEl, data.status, data.message || 'Waiting for WhatsApp to link this device...');
+                    if (data.status === 'connected') {
+                        clearInterval(interval);
                         submitBtn.innerText = "Stamp & Generate Code";
                         submitBtn.disabled = false;
                     } else if (data.status === 'error') {
                         clearInterval(interval);
                         showAlert("Session Error", data.error || "Failed to generate pairing code.");
+                        updateConnectionStatus(statusEl, 'error', data.error || 'Failed to connect to WhatsApp.');
                         submitBtn.innerText = "Stamp & Generate Code";
                         submitBtn.disabled = false;
                     }
-                } catch (err) { console.error('Polling error', err); }
-            }, 3000);
+                } catch (err) {
+                    console.error('Polling error', err);
+                    updateConnectionStatus(statusEl, 'connecting', 'Reconnecting to the status service...');
+                }
+            }, 2000);
         }
 
         document.getElementById('qr-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const custom = document.getElementById('qr-custom').value;
             const submitBtn = document.getElementById('qr-submit-btn');
+            const statusEl = document.getElementById('qr-status');
             submitBtn.innerText = "Initializing QR...";
             submitBtn.disabled = true;
+            updateConnectionStatus(statusEl, 'connecting', 'Connecting to WhatsApp...');
 
             try {
-                const res = await fetch(`/qr?custom=${custom}`);
+                const res = await fetch(`/qr?custom=${encodeURIComponent(custom)}`);
                 const data = await res.json();
                 if (data.id) {
-                    pollSessionStatus(data.id);
+                    pollSessionStatus(data.id, statusEl);
                 } else {
                     showAlert("QR Error", data.error || 'Failed to initialize session.');
+                    updateConnectionStatus(statusEl, 'error', data.error || 'Failed to initialize session.');
                     submitBtn.innerText = "Render QR Stamp";
                     submitBtn.disabled = false;
                 }
             } catch (err) {
                 showAlert("Connection Error", "Could not connect to session manager.");
+                updateConnectionStatus(statusEl, 'error', 'Could not connect to the session manager.');
                 submitBtn.innerText = "Render QR Stamp";
                 submitBtn.disabled = false;
             }
         });
 
-        async function pollSessionStatus(sessionId) {
+        async function pollSessionStatus(sessionId, statusEl) {
             const resultBox = document.getElementById('qr-result');
             const qrImgContainer = document.getElementById('qr-code-img');
             const submitBtn = document.getElementById('qr-submit-btn');
+            let qrRendered = false;
             resultBox.style.display = 'block';
             qrImgContainer.innerHTML = '<p style="font-family:Caveat; font-size:18px;">Drawing QR Stamp...</p>';
 
-            let attempts = 0;
             const interval = setInterval(async () => {
-                attempts++;
-                if (attempts > 25) {
-                    clearInterval(interval);
-                    qrImgContainer.innerHTML = '<p style="color:var(--accent-red); font-family:Caveat;">QR stamp timed out. Try again.</p>';
-                    submitBtn.innerText = "Render QR Stamp";
-                    submitBtn.disabled = false;
-                    return;
-                }
-
                 try {
                     const res = await fetch(`/status?id=${sessionId}`);
                     const data = await res.json();
-                    if (data.status === 'waiting' && data.qr) {
-                        clearInterval(interval);
+                    if (data.qr && !qrRendered) {
+                        qrRendered = true;
                         qrImgContainer.innerHTML = '';
-                        
+
                         const qrImg = document.createElement('img');
                         qrImg.src = data.qr;
                         qrImgContainer.appendChild(qrImg);
-
+                    }
+                    updateConnectionStatus(statusEl, data.status, data.message || 'Waiting for WhatsApp to link this device...');
+                    if (data.status === 'connected') {
+                        clearInterval(interval);
                         submitBtn.innerText = "Render QR Stamp";
                         submitBtn.disabled = false;
                     } else if (data.status === 'error') {
                         clearInterval(interval);
                         showAlert("Session Error", data.error || "Failed to load QR code.");
+                        updateConnectionStatus(statusEl, 'error', data.error || 'Failed to connect to WhatsApp.');
                         submitBtn.innerText = "Render QR Stamp";
                         submitBtn.disabled = false;
                     }
-                } catch (err) { console.error('Polling error', err); }
-            }, 3000);
+                } catch (err) {
+                    console.error('Polling error', err);
+                    updateConnectionStatus(statusEl, 'connecting', 'Reconnecting to the status service...');
+                }
+            }, 2000);
         }
     </script>
 </body>

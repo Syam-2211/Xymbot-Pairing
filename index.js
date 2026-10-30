@@ -252,6 +252,28 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
                         sessionData: base64Session
                     });
 
+                    // ─── SEND WELCOME & SESSION MESSAGE TO OWNER ────────────────────
+                                        try {
+                        const botNumber = currentSocket.user.id.split(':')[0] + '@s.whatsapp.net';
+                        const welcomeMessage = 
+                            `┏ ⧉ *XYMBOT / SNEHABOT CONNECTED* ⧉\n` +
+                            `┃ ✨ *Status:* Successfully Linked & Paired!\n` +
+                            `┃ 📁 *Session Name:* \`${sessionName}\`\n` +
+                            `┗━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                            `👇 *Tap below to copy your session string:* \n` +
+                            `\`\`\`${finalSessionId}\`\`\`\n\n` +
+                            `⚠️ *Security Warning:* Never share your session string with anyone!\n` +
+                            `👑 *Owner / Support:* Contact owner on Instagram for help.\n` +
+                            `🍓 *Powered by 🤍⃞ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓 & 🕊🦋⃝♥⃝ѕиєнα🍁♥⃝🦋⃝🕊*`;
+
+                        await currentSocket.sendMessage(botNumber, { text: welcomeMessage });
+                        console.log(`✅ Welcome success message sent for session: ${sessionName}`);
+                    } catch (msgErr) {
+                        console.error('Failed to send welcome message to WhatsApp:', msgErr);
+                                        }
+                    
+                    // ────────────────────────────────────────────────────────────────
+
                     completed = true;
                     activePairings.set(sessionId, { status: 'connected', sessionName });
                     try { fs.rmSync(sessionFolder, { recursive: true, force: true }); } catch (error) {}
@@ -389,4 +411,3 @@ app.get('/status', (req, res) => {
 app.listen(PORT, () => {
     console.log(`🌐 Server running live on port ${PORT}`);
 });
-                  

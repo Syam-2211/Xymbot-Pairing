@@ -6,8 +6,7 @@ import mongoose from 'mongoose';
 import { fileURLToPath } from 'url';
 import makeWASocket, {
     useMultiFileAuthState,
-    delay,
-    Browsers
+    delay
 } from '@whiskeysockets/baileys';
 import qrcode from 'qrcode';
 import { verifyLicense, generateRandomKey } from './licenseManager.js';
@@ -132,7 +131,6 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
             auth: state,
             printQRInTerminal: false,
             logger: pino({ level: 'warn' }),
-            browser: Browsers.windows('Desktop'),
             syncFullHistory: false,
         });
 

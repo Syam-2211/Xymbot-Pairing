@@ -4,7 +4,6 @@ import path from 'path';
 import pino from 'pino';
 import mongoose from 'mongoose';
 import { fileURLToPath } from 'url';
-import cors from 'cors'; // Add this to your imports 
 import makeWASocket, {
     useMultiFileAuthState,
     delay
@@ -16,11 +15,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(cors({
-    origin: ['https://xymbot-pairing.vercel.app', 'http://localhost:3000'],
-    methods: ['GET', 'POST', 'DELETE']
-}));
-
 const PORT = process.env.PORT || 8000;
 
 // ─── MONGODB SETUP ─────────────────────────────────────────────────────────
@@ -68,7 +62,6 @@ app.get('/admin', (req, res) => {
 
 // ─── API ENDPOINTS ─────────────────────────────────────────────────────────
 
-// Verify License Key Route
 app.get('/api/verify-license', async (req, res) => {
     try {
         const key = req.query.key;
@@ -82,7 +75,6 @@ app.get('/api/verify-license', async (req, res) => {
     }
 });
 
-// Client Key Generation Route
 app.post('/api/client-generate-key', async (req, res) => {
     try {
         const newKey = generateRandomKey();
@@ -93,7 +85,6 @@ app.post('/api/client-generate-key', async (req, res) => {
     }
 });
 
-// Admin API to fetch all keys
 app.get('/api/admin/keys', async (req, res) => {
     try {
         const keys = await License.find().sort({ createdAt: -1 });
@@ -103,7 +94,6 @@ app.get('/api/admin/keys', async (req, res) => {
     }
 });
 
-// Admin API to generate key
 app.post('/api/admin/generate', async (req, res) => {
     try {
         const newKey = generateRandomKey();
@@ -114,7 +104,6 @@ app.post('/api/admin/generate', async (req, res) => {
     }
 });
 
-// Admin API to revoke key
 app.delete('/api/admin/revoke/:id', async (req, res) => {
     try {
         await License.findByIdAndDelete(req.params.id);
@@ -235,7 +224,7 @@ app.get('/pair', async (req, res) => {
     if (!sessionName) return res.status(400).json({ error: 'Enter a valid custom session name (3-40 alphanumeric chars).' });
 
     const sessionId = 'session-' + Date.now();
-    const sessionFolder = `./tmp/${sessionId}`;
+    const sessionFolder = `/tmp/${sessionId}`;
     if (!fs.existsSync(sessionFolder)) fs.mkdirSync(sessionFolder, { recursive: true });
 
     activePairings.set(sessionId, { status: 'waiting' });
@@ -255,22 +244,19 @@ app.get('/pair', async (req, res) => {
             return res.status(400).json({ error: 'Session already registered.' });
         }
 
-        // Wait dynamically for connection or open state via a Promise wrapper
         const pairingCode = await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
                 reject(new Error('Pairing code generation timed out waiting for connection.'));
-            }, 25000); // 25 second timeout
+            }, 25000); 
 
-            // Listen for socket updates to request the code safely once connected/ready
             let codeRequested = false;
 
             const handleUpdate = async (update) => {
                 const { connection } = update;
-                // Once connection establishes or socket is ready, request code if not already done
                 if (!codeRequested) {
                     codeRequested = true;
                     try {
-                        await delay(1500); // Brief buffer for socket stability
+                        await delay(1500); 
                         const code = await socket.requestPairingCode(phone);
                         clearTimeout(timeout);
                         socket.ev.off('connection.update', handleUpdate);
@@ -283,8 +269,6 @@ app.get('/pair', async (req, res) => {
                 }
             };
 
-            // Alternatively, if connection.update doesn't trigger immediately, 
-            // trigger after a safe connection attempt check
             setTimeout(async () => {
                 if (!codeRequested) {
                     try {
@@ -292,9 +276,7 @@ app.get('/pair', async (req, res) => {
                         const code = await socket.requestPairingCode(phone);
                         clearTimeout(timeout);
                         resolve(code);
-                    } catch (err) {
-                        // If it fails here, let it try or fallback
-                    }
+                    } catch (err) {}
                 }
             }, 4000); 
         });
@@ -319,15 +301,10 @@ app.get('/status', (req, res) => {
     res.json(activePairings.get(id));
 });
 
-app.listen(PORT, () => {
-    console.log(`🌐 Server running live on port ${PORT}`);
-}); 
-
-
- if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 
 export default app;
-
+                        

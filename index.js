@@ -4,6 +4,7 @@ import path from 'path';
 import pino from 'pino';
 import mongoose from 'mongoose';
 import { fileURLToPath } from 'url';
+import cors from 'cors'; // Add this to your imports 
 import makeWASocket, {
     useMultiFileAuthState,
     delay
@@ -15,6 +16,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.use(cors({
+    origin: ['https://xymbot-pairing.vercel.app', 'http://localhost:3000'],
+    methods: ['GET', 'POST', 'DELETE']
+}));
+
 const PORT = process.env.PORT || 8000;
 
 // ─── MONGODB SETUP ─────────────────────────────────────────────────────────

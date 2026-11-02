@@ -316,3 +316,4 @@ app.get('/status', (req, res) => {
 app.listen(PORT, () => {
     console.log(`🌐 Server running live on port ${PORT}`);
 }); 
+module.exports = app;

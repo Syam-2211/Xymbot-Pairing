@@ -1,12 +1,15 @@
 {
   "version": 2,
-  "framework": null,
-  "buildCommand": "npm install",
-  "rewrites": [
-    { "source": "/license-portal", "destination": "/license.html" },
-    { "source": "/admin", "destination": "/admin-dashboard.html" },
-    { "source": "/api/(.*)", "destination": "https://your-render-backend-url.com/api/$1" },
-    { "source": "/pair", "destination": "https://your-render-backend-url.com/pair" },
-    { "source": "/status", "destination": "https://your-render-backend-url.com/status" }
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.js"
+    }
   ]
 }

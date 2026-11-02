@@ -1,18 +1,14 @@
 services:
   - type: web
-    name: xymbot-pairing
-    runtime: node
-    plan: free
+    name: xymbot-pairing-backend
+    env: node
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node index.js
     envVars:
-      - key: NODE_VERSION
-        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8000
       - key: MONGO_URI
-        sync: false
-      - key: TELEGRAM_BOT_TOKEN
-        sync: false
-      - key: OWNER_ID
-        sync: false
-      - key: OWNER_CONTACT
-        sync: false
+        sync: false 
+        

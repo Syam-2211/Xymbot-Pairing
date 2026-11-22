@@ -1,14 +1,16 @@
 services:
   - type: web
     name: xymbot-pairing-backend
-    env: node
+    runtime: node
+    plan: free
     buildCommand: npm install
     startCommand: node index.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 8000
+        value: "8000"
       - key: MONGO_URI
-        sync: false 
-        
+        sync: false
+      - key: ADMIN_SECRET
+        value: binisha

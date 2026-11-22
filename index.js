@@ -66,6 +66,92 @@ function ensureMongoReady(res, errorMessage = 'MongoDB is required for this oper
     return true;
 }
 
+// ─── SERVER-SIDE ADMIN AUTH MIDDLEWARE & ROUTES ────────────────────────────
+function extractAdminSecret(req) {
+    const headerSecret = req.headers['x-admin-secret'];
+    if (typeof headerSecret === 'string' && headerSecret.trim()) {
+        return headerSecret.trim();
+    }
+    const authHeader = req.headers.authorization;
+    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+        return authHeader.slice(7).trim();
+    }
+    if (typeof req.query?.secret === 'string' && req.query.secret.trim()) {
+        return req.query.secret.trim();
+    }
+    if (typeof req.body?.secret === 'string' && req.body.secret.trim()) {
+        return req.body.secret.trim();
+    }
+    return '';
+}
+
+function requireAdmin(req, res, next) {
+    const providedSecret = extractAdminSecret(req);
+    if (!providedSecret || providedSecret !== ADMIN_SECRET) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Invalid or missing admin secret.' });
+    }
+    return next();
+}
+
+app.post('/api/admin/login', (req, res) => {
+    const secret = extractAdminSecret(req);
+    if (!secret || secret !== ADMIN_SECRET) {
+        return res.status(401).json({ success: false, error: 'Access Denied: Incorrect Admin Key!' });
+    }
+    return res.json({ success: true, message: 'Admin authenticated.' });
+});
+
+app.get('/api/admin/keys', requireAdmin, async (req, res) => {
+    try {
+        if (!ensureMongoReady(res, 'Database unavailable.')) return;
+
+        const keys = await License.find().sort({ createdAt: -1, _id: -1 });
+        return res.json({ success: true, keys });
+    } catch (err) {
+        console.error('Fetch keys error:', err);
+        return res.status(500).json({ success: false, error: 'Failed to fetch keys' });
+    }
+});
+
+app.post('/api/admin/generate', requireAdmin, async (req, res) => {
+    try {
+        if (!ensureMongoReady(res, 'Database unavailable.')) return;
+
+        const rawDays = Number(req.body?.durationDays);
+        const durationDays = Number.isFinite(rawDays) && rawDays > 0 && rawDays <= 3650
+            ? Math.floor(rawDays)
+            : 30;
+
+        const newKey = generateRandomKey();
+        const license = await License.create({ key: newKey, durationDays });
+        return res.json({ success: true, license });
+    } catch (err) {
+        console.error('Admin generate key error:', err);
+        return res.status(500).json({ success: false, error: 'Failed to create key' });
+    }
+});
+
+app.delete('/api/admin/revoke/:id', requireAdmin, async (req, res) => {
+    try {
+        if (!ensureMongoReady(res, 'Database unavailable.')) return;
+
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, error: 'Invalid license ID.' });
+        }
+
+        const deleted = await License.findByIdAndDelete(id);
+        if (!deleted) {
+            return res.status(404).json({ success: false, error: 'License key not found.' });
+        }
+
+        return res.json({ success: true });
+    } catch (err) {
+        console.error('Revoke key error:', err);
+        return res.status(500).json({ success: false, error: 'Failed to revoke key' });
+    }
+});
+
 // ─── PAGE ROUTES ───────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'site.html'));
@@ -79,7 +165,7 @@ app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin-dashboard.html'));
 });
 
-// ─── API ENDPOINTS ─────────────────────────────────────────────────────────
+// ─── CLIENT LICENSE ROUTES ─────────────────────────────────────────────────
 app.get('/api/verify-license', async (req, res) => {
     try {
         const key = (req.query.key || '').trim();
@@ -105,43 +191,6 @@ app.post('/api/client-generate-key', async (req, res) => {
     } catch (err) {
         console.error('Client key generation error:', err);
         return res.status(400).json({ error: 'Failed to generate license key.' });
-    }
-});
-
-app.get('/api/admin/keys', async (req, res) => {
-    try {
-        if (!ensureMongoReady(res, 'Database unavailable.')) return;
-
-        const keys = await License.find().sort({ createdAt: -1, _id: -1 });
-        return res.json({ keys });
-    } catch (err) {
-        console.error('Fetch keys error:', err);
-        return res.status(500).json({ error: 'Failed to fetch keys' });
-    }
-});
-
-app.post('/api/admin/generate', async (req, res) => {
-    try {
-        if (!ensureMongoReady(res, 'Database unavailable.')) return;
-
-        const newKey = generateRandomKey();
-        const license = await License.create({ key: newKey, durationDays: 30 });
-        return res.json({ success: true, license });
-    } catch (err) {
-        console.error('Admin generate key error:', err);
-        return res.status(500).json({ error: 'Failed to create key' });
-    }
-});
-
-app.delete('/api/admin/revoke/:id', async (req, res) => {
-    try {
-        if (!ensureMongoReady(res, 'Database unavailable.')) return;
-
-        await License.findByIdAndDelete(req.params.id);
-        return res.json({ success: true });
-    } catch (err) {
-        console.error('Revoke key error:', err);
-        return res.status(500).json({ error: 'Failed to revoke key' });
     }
 });
 

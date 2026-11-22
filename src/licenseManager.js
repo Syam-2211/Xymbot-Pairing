@@ -6,13 +6,13 @@ const licenseSchema = new mongoose.Schema({
     expiresAt: Date,
     isActivated: { type: Boolean, default: false },
     boundSession: { type: String, default: null }
-});
+}, { timestamps: true });
 
 const License = mongoose.models.License || mongoose.model('License', licenseSchema);
 
 export function generateRandomKey() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let segment = () => Array.from({length: 4}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    let segment = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     return `XYM-${segment()}-${segment()}-${segment()}`;
 }
 

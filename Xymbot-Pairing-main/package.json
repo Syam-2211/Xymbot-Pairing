@@ -1,0 +1,26 @@
+{
+  "type": "module",
+  "name": "xymbot-pairing",
+  "version": "1.0.0",
+  "description": "Pairing Code generator for Xymbot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "latest",
+    "adm-zip": "^0.6.0",
+    "archiver": "^8.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "fs-extra": "^11.2.0",
+    "mongoose": "^9.11.2",
+    "node-telegram-bot-api": "^0.66.0",
+    "pino": "^9.0.0",
+    "qrcode": "^1.5.4"
+  },
+  "allowScripts": {
+    "@whiskeysockets/baileys@7.0.0-rc14": true,
+    "protobufjs@7.6.5": true
+  }
+}

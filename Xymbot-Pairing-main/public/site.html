@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xymbot • Hand-Crafted Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <style>
+        :root {
+            --paper-bg: #f4f1ea;
+            --paper-line: #d3c9b1;
+            --paper-sheet: #fffdf9;
+            --ink-blue: #1b3b6f;
+            --ink-black: #1a1a1a;
+            --accent-red: #c0392b;
+            --pencil: #7f8c8d;
+            --margin-red: rgba(192, 57, 43, 0.3);
+            --card-border: #b5a88c;
+            --card-shadow: rgba(0, 0, 0, 0.12);
+            --result-bg: #fcf8ec;
+            --tab-active-bg: #f0ece1;
+            --symbiote-glow: rgba(0, 240, 255, 0.25);
+            --symbiote-tendril: #080c10;
+        }
+
+        [data-theme="dark"] {
+            --paper-bg: #0d1117;
+            --paper-line: #1c2333;
+            --paper-sheet: #131a24;
+            --ink-blue: #58a6ff;
+            --ink-black: #e6edf3;
+            --accent-red: #ff7b72;
+            --pencil: #8b949e;
+            --margin-red: rgba(255, 123, 114, 0.35);
+            --card-border: #30363d;
+            --card-shadow: rgba(0, 0, 0, 0.65);
+            --result-bg: #161e2b;
+            --tab-active-bg: #1e2838;
+            --symbiote-glow: rgba(88, 166, 255, 0.4);
+            --symbiote-tendril: #e6edf3;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--paper-bg);
+            background-image: 
+                linear-gradient(to right, var(--paper-line) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--paper-line) 1px, transparent 1px);
+            background-size: 24px 24px;
+            color: var(--ink-black);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+            font-family: 'Special Elite', monospace;
+        }
+
+        #crumple-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #d8d3c5;
+            background-image: radial-gradient(#b8b1a2 20%, transparent 21%), radial-gradient(#b8b1a2 20%, transparent 21%);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            z-index: 999;
+            display: none;
+            opacity: 0;
+            pointer-events: none;
+            filter: contrast(150%) brightness(90%);
+        }
+
+        .notebook-card {
+            width: 100%;
+            max-width: 520px;
+            background: var(--paper-sheet);
+            border: 2px dashed var(--card-border);
+            padding: 40px;
+            box-shadow: 8px 12px 0px var(--card-shadow);
+            position: relative;
+            transform: rotate(-0.5deg);
+            transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, transform 0.3s ease;
+        }
+
+        .notebook-card::before {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0; left: 45px;
+            width: 2px;
+            background: var(--margin-red);
+        }
+
+        .header h1 {
+            font-family: 'Kalam', cursive;
+            font-size: 32px;
+            color: var(--ink-blue);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .header p {
+            font-family: 'Caveat', cursive;
+            font-size: 20px;
+            color: var(--pencil);
+            margin-bottom: 28px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 28px;
+            border-bottom: 2px solid var(--paper-line);
+            padding-bottom: 12px;
+        }
+
+        .tab-btn {
+            font-family: 'Kalam', cursive;
+            font-size: 18px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--pencil);
+            padding: 4px 12px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--ink-blue);
+            background: var(--tab-active-bg);
+            border-bottom: 3px solid var(--ink-blue);
+            transform: scale(1.05);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .input-group { margin-bottom: 22px; }
+        .input-group label {
+            display: block;
+            font-size: 14px;
+            font-family: 'Kalam', cursive;
+            color: var(--ink-blue);
+            margin-bottom: 4px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid var(--ink-black);
+            font-size: 24px;
+            outline: none;
+            font-family: 'Caveat', cursive;
+            letter-spacing: 1px;
+        }
+
+        input.blue-ink { color: var(--ink-blue); }
+        input.black-ink { color: var(--ink-black); }
+
+        input::placeholder {
+            color: #b5a88c;
+            font-family: 'Special Elite', monospace;
+            font-size: 13px;
+        }
+
+        .stamp-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--ink-blue);
+            color: #fff;
+            border: 2px solid var(--ink-black);
+            font-family: 'Kalam', cursive;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px var(--ink-black);
+            transition: all 0.1s ease;
+            margin-top: 10px;
+            text-transform: uppercase;
+        }
+
+        .stamp-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px var(--ink-black);
+        }
+
+        .result-box {
+            margin-top: 24px;
+            padding: 20px;
+            background: var(--result-bg);
+            border: 2px dashed var(--ink-blue);
+            text-align: center;
+            display: none;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 14px;
+            padding: 12px 14px;
+            border: 1px solid var(--paper-line);
+            background: var(--paper-sheet);
+            color: var(--ink-blue);
+            font-family: 'Kalam', cursive;
+            font-size: 16px;
+            line-height: 1.35;
+            text-align: left;
+        }
+        .connection-status[hidden] { display: none; }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            flex: 0 0 10px;
+            border-radius: 50%;
+            background: var(--pencil);
+        }
+        .connection-status[data-state="connecting"] .status-dot,
+        .connection-status[data-state="linking"] .status-dot {
+            background: #d98b20;
+            animation: status-pulse 1.2s ease-in-out infinite;
+        }
+        .connection-status[data-state="connected"] .status-dot { background: #30834a; }
+        .connection-status[data-state="error"] .status-dot { background: var(--accent-red); }
+        @keyframes status-pulse {
+            50% { opacity: 0.35; transform: scale(0.82); }
+        }
+
+        .code-display {
+            font-family: 'Special Elite', monospace;
+            font-size: 28px;
+            color: var(--accent-red);
+            letter-spacing: 3px;
+            background: var(--paper-sheet);
+            padding: 10px;
+            border: 1px solid var(--paper-line);
+            display: inline-block;
+        }
+
+        .qr-display {
+            background: var(--paper-sheet);
+            padding: 12px;
+            border: 2px solid var(--ink-black);
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .qr-display img {
+            display: block;
+            margin: 0 auto;
+            width: 180px;
+            height: 180px;
+        }
+
+        #custom-alert {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; display: none; opacity: 0;
+        }
+
+        .alert-card {
+            background: var(--paper-sheet);
+            border: 2px solid var(--ink-blue);
+            padding: 30px; max-width: 380px; width: 90%;
+            text-align: center; box-shadow: 6px 6px 0px var(--card-shadow);
+            transform: scale(0.9);
+        }
+
+        .alert-card h3 { font-family: 'Kalam', cursive; font-size: 24px; color: var(--accent-red); margin-bottom: 10px; }
+        .alert-card p { font-family: 'Caveat', cursive; font-size: 20px; color: var(--ink-black); margin-bottom: 20px; }
+        .alert-btn { background: var(--ink-blue); color: #fff; border: 1px solid var(--ink-black); padding: 8px 24px; font-family: 'Kalam', cursive; font-size: 18px; cursor: pointer; }
+
+        /* ─── SYMBIOTIC THEME TOGGLE & CANVAS OVERLAY ──────────────── */
+        #symbiote-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .symbiote-toggle-wrap {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+        }
+
+        .symbiote-toggle-btn {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 18px;
+            background: var(--paper-sheet);
+            border: 2px solid var(--ink-black);
+            color: var(--ink-black);
+            font-family: 'Kalam', cursive;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px var(--card-shadow);
+            outline: none;
+            overflow: visible;
+            border-radius: 999px;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, background 0.3s ease, color 0.3s ease;
+        }
+
+        .symbiote-toggle-btn:hover {
+            transform: translate(-2px, -2px) scale(1.03);
+            box-shadow: 6px 6px 0px var(--card-shadow), 0 0 16px var(--symbiote-glow);
+        }
+
+        .symbiote-toggle-btn:active {
+            transform: translate(2px, 2px) scale(0.97);
+            box-shadow: 2px 2px 0px var(--card-shadow);
+        }
+
+        .symbiote-orb {
+            position: relative;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #ffd166, #e76f51);
+            box-shadow: 0 0 8px rgba(231, 111, 81, 0.6);
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        [data-theme="dark"] .symbiote-orb {
+            background: radial-gradient(circle at 35% 35%, #00f0ff, #7928ca);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.8), inset 0 0 6px rgba(255, 255, 255, 0.6);
+            transform: rotate(180deg);
+        }
+
+        /* Pulsing bio-aura ring around the orb */
+        .symbiote-orb::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border-radius: 50%;
+            border: 1.5px dashed var(--ink-blue);
+            animation: symbiote-ring-spin 8s linear infinite;
+            opacity: 0.7;
+        }
+
+        @keyframes symbiote-ring-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Fluid symbiote tendril ripples on toggle action */
+        .symbiote-toggle-btn.symbiotic-pulsing {
+            animation: symbiote-organism-twitch 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        @keyframes symbiote-organism-twitch {
+            0% { transform: scale(1); }
+            20% { transform: scale(1.15) rotate(-3deg); filter: drop-shadow(0 0 18px var(--symbiote-glow)); }
+            45% { transform: scale(0.92) rotate(3deg); }
+            70% { transform: scale(1.06) rotate(-1deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        /* Symbiotic breathing idle effect on stamp buttons */
+        .stamp-btn {
+            position: relative;
+            overflow: hidden;
+        }
+        .stamp-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, var(--symbiote-glow) 10%, transparent 60%);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        .stamp-btn:hover::after {
+            opacity: 1;
+            animation: symbiote-tendril-swell 3s ease-in-out infinite alternate;
+        }
+        @keyframes symbiote-tendril-swell {
+            0% { transform: scale(0.85) rotate(0deg); }
+            100% { transform: scale(1.15) rotate(15deg); }
+        }
+
+        .footer-scribbles {
+            margin-top: 30px; display: flex; justify-content: space-between;
+            font-family: 'Caveat', cursive; font-size: 18px;
+        }
+        .footer-scribbles a { color: var(--ink-blue); text-decoration: underline; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <canvas id="symbiote-canvas"></canvas>
+
+    <div class="symbiote-toggle-wrap">
+        <button id="theme-toggle" class="symbiote-toggle-btn" aria-label="Toggle symbiotic theme mode" title="Shift Symbiotic State">
+            <span class="symbiote-orb" id="symbiote-orb"></span>
+            <span id="theme-label">Light Organism</span>
+        </button>
+    </div>
+
+    <div id="crumple-overlay"></div>
+
+    <div id="custom-alert">
+        <div class="alert-card" id="alert-card-inner">
+            <h3 id="alert-title">Notice Note</h3>
+            <p id="alert-message">Something went wrong!</p>
+            <button class="alert-btn" onclick="closeAlert()">Okay, Got it</button>
+        </div>
+    </div>
+
+    <div class="notebook-card" id="main-card">
+        <div class="header">
+            <h1>Notebook Pairing Log</h1>
+            <p>// handwritten session & bot linkage portal • 🤍⃞ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('pair')">01. Pairing Code</button>
+            <button class="tab-btn" onclick="switchTab('qr')">02. QR Stamp</button>
+        </div>
+
+        <div id="pair-content" class="tab-content active">
+            <form id="pair-form">
+                <div class="input-group">
+                    <label>Session Name Scribble:</label>
+                    <input type="text" id="pair-custom" class="pen-input" placeholder="e.g. sneha-bot" required>
+                </div>
+                <div class="input-group">
+                    <label>Phone Digits:</label>
+                    <input type="tel" id="pair-phone" class="pen-input" placeholder="e.g. 919876543210" required>
+                </div>
+                <button type="submit" class="stamp-btn" id="pair-submit-btn">Stamp & Generate Code</button>
+            </form>
+
+            <div id="pair-result" class="result-box">
+                <h3 style="font-family:'Kalam'; color:var(--ink-blue)">Assigned Pairing Code:</h3>
+                <p style="font-family:'Caveat'; font-size:18px; color:var(--pencil)">Copy this into your WhatsApp linked devices:</p>
+                <code class="code-display" id="pair-code">----</code>
+            </div>
+            <div class="connection-status" id="pair-status" role="status" aria-live="polite" hidden>
+                <span class="status-dot" aria-hidden="true"></span>
+                <span class="status-message"></span>
+            </div>
+        </div>
+
+        <div id="qr-content" class="tab-content">
+            <form id="qr-form">
+                <div class="input-group">
+                    <label>Session Name Scribble:</label>
+                    <input type="text" id="qr-custom" class="pen-input" placeholder="e.g. sneha-bot" required>
+                </div>
+                <button type="submit" class="stamp-btn" id="qr-submit-btn">Render QR Stamp</button>
+            </form>
+
+            <div id="qr-result" class="result-box">
+                <h3 style="font-family:'Kalam'; color:var(--ink-blue)">Scan Paper QR:</h3>
+                <p style="font-family:'Caveat'; font-size:18px; color:var(--pencil)">Point phone camera to scan configuration code.</p>
+                <div class="qr-display" id="qr-code-img"></div>
+            </div>
+            <div class="connection-status" id="qr-status" role="status" aria-live="polite" hidden>
+                <span class="status-dot" aria-hidden="true"></span>
+                <span class="status-message"></span>
+            </div>
+        </div>
+
+        <div class="footer-scribbles">
+            <a onclick="crumpleTransition('/license-portal')">➔ Go to License Portal</a>
+            <span>[🤍⃞ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓]</span>
+        </div>
+    </div>
+
+    <script>
+        /* ─── SYMBIOTIC THEME ENGINE & LIQUID TENDRIL ANIMATION ─── */
+        (function initSymbioticEngine() {
+            const canvas = document.getElementById('symbiote-canvas');
+            const ctx = canvas.getContext('2d');
+            const toggleBtn = document.getElementById('theme-toggle');
+            const themeLabel = document.getElementById('theme-label');
+
+            let width, height;
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            // Load saved preference or fallback
+            const savedTheme = localStorage.getItem('xymbot_theme') || 
+                (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+            function applyTheme(theme, animate = false, originX = width / 2, originY = height / 2) {
+                if (animate) {
+                    triggerSymbioticBurst(theme, originX, originY, () => {
+                        document.documentElement.setAttribute('data-theme', theme);
+                        localStorage.setItem('xymbot_theme', theme);
+                        themeLabel.textContent = theme === 'dark' ? 'Dark Parasite' : 'Light Organism';
+                    });
+                } else {
+                    document.documentElement.setAttribute('data-theme', theme);
+                    localStorage.setItem('xymbot_theme', theme);
+                    themeLabel.textContent = theme === 'dark' ? 'Dark Parasite' : 'Light Organism';
+                }
+            }
+
+            // Tendrils particle system for symbiotic organic pulse
+            class SymbioteTendril {
+                constructor(ox, oy, color, targetRadius, speedMultiplier = 1) {
+                    this.ox = ox;
+                    this.oy = oy;
+                    this.color = color;
+                    this.maxRadius = targetRadius;
+                    this.currentRadius = 0;
+                    this.speed = (18 + Math.random() * 12) * speedMultiplier;
+                    this.branches = [];
+                    this.angle = Math.random() * Math.PI * 2;
+                    this.curve = (Math.random() - 0.5) * 0.08;
+                    this.width = 4 + Math.random() * 8;
+                    this.decay = 0.99;
+                    this.nodes = [{ x: ox, y: oy }];
+                    this.finished = false;
+                }
+
+                grow() {
+                    if (this.currentRadius >= this.maxRadius) {
+                        this.finished = true;
+                        return;
+                    }
+                    this.currentRadius += this.speed;
+                    this.angle += this.curve;
+                    const nextX = this.ox + Math.cos(this.angle) * this.currentRadius;
+                    const nextY = this.oy + Math.sin(this.angle) * this.currentRadius;
+                    this.nodes.push({ x: nextX, y: nextY });
+                    if (this.nodes.length > 25) this.nodes.shift();
+
+                    // Chance to sprout daughter vein
+                    if (Math.random() < 0.08 && this.branches.length < 3) {
+                        this.branches.push(new SymbioteTendril(nextX, nextY, this.color, this.maxRadius * 0.45, 0.7));
+                    }
+                    this.branches.forEach(b => b.grow());
+                }
+
+                draw(ctx) {
+                    if (this.nodes.length < 2) return;
+                    ctx.save();
+                    ctx.strokeStyle = this.color;
+                    ctx.lineWidth = this.width;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.shadowColor = this.color;
+                    ctx.shadowBlur = 14;
+
+                    ctx.beginPath();
+                    ctx.moveTo(this.nodes[0].x, this.nodes[0].y);
+                    for (let i = 1; i < this.nodes.length; i++) {
+                        ctx.lineTo(this.nodes[i].x, this.nodes[i].y);
+                    }
+                    ctx.stroke();
+
+                    // Draw organic blob head
+                    const head = this.nodes[this.nodes.length - 1];
+                    ctx.beginPath();
+                    ctx.arc(head.x, head.y, this.width * 0.7, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+
+                    ctx.restore();
+                    this.branches.forEach(b => b.draw(ctx));
+                }
+            }
+
+            let activeBurst = null;
+
+            function triggerSymbioticBurst(newTheme, ox, oy, onMidpoint) {
+                const maxDim = Math.hypot(Math.max(ox, width - ox), Math.max(oy, height - oy)) * 1.05;
+                const isGoingDark = newTheme === 'dark';
+                const tendrilColor = isGoingDark ? '#0d1117' : '#f4f1ea';
+                const glowColor = isGoingDark ? '#00f0ff' : '#ffd166';
+
+                const tendrils = [];
+                const tendrilCount = 38;
+                for (let i = 0; i < tendrilCount; i++) {
+                    tendrils.push(new SymbioteTendril(ox, oy, isGoingDark ? (i % 2 === 0 ? '#0d1117' : '#1c2333') : (i % 2 === 0 ? '#f4f1ea' : '#fffdf9'), maxDim, 1));
+                }
+
+                let membraneRadius = 0;
+                const membraneSpeed = maxDim / 24;
+                let midpointTriggered = false;
+
+                toggleBtn.classList.add('symbiotic-pulsing');
+                setTimeout(() => toggleBtn.classList.remove('symbiotic-pulsing'), 750);
+
+                function animateStep() {
+                    ctx.clearRect(0, 0, width, height);
+
+                    // Organic amoeba / symbiote wave membrane expanding
+                    membraneRadius += membraneSpeed;
+
+                    ctx.save();
+                    ctx.beginPath();
+                    const segments = 36;
+                    for (let i = 0; i <= segments; i++) {
+                        const a = (i / segments) * Math.PI * 2;
+                        const distortion = Math.sin(a * 7 + membraneRadius * 0.05) * (membraneRadius * 0.12) +
+                                           Math.cos(a * 4 - membraneRadius * 0.03) * (membraneRadius * 0.08);
+                        const r = Math.max(0, membraneRadius + distortion);
+                        const px = ox + Math.cos(a) * r;
+                        const py = oy + Math.sin(a) * r;
+                        if (i === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.closePath();
+                    ctx.fillStyle = tendrilColor;
+                    ctx.shadowColor = glowColor;
+                    ctx.shadowBlur = 35;
+                    ctx.fill();
+                    ctx.restore();
+
+                    // Draw symbiotic tendril web reaching outwards
+                    tendrils.forEach(t => {
+                        t.grow();
+                        t.draw(ctx);
+                    });
+
+                    if (membraneRadius >= maxDim * 0.45 && !midpointTriggered) {
+                        midpointTriggered = true;
+                        if (typeof onMidpoint === 'function') onMidpoint();
+                    }
+
+                    if (membraneRadius < maxDim * 1.25) {
+                        requestAnimationFrame(animateStep);
+                    } else {
+                        // Dissolve symbiote mask smoothly
+                        let alpha = 1;
+                        function fadeOut() {
+                            alpha -= 0.08;
+                            if (alpha > 0) {
+                                ctx.clearRect(0, 0, width, height);
+                                ctx.save();
+                                ctx.globalAlpha = alpha;
+                                ctx.fillStyle = tendrilColor;
+                                ctx.fillRect(0, 0, width, height);
+                                ctx.restore();
+                                requestAnimationFrame(fadeOut);
+                            } else {
+                                ctx.clearRect(0, 0, width, height);
+                            }
+                        }
+                        fadeOut();
+                    }
+                }
+
+                requestAnimationFrame(animateStep);
+            }
+
+            // Click listener on toggle button
+            toggleBtn.addEventListener('click', (e) => {
+                const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+                const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                const rect = toggleBtn.getBoundingClientRect();
+                const originX = rect.left + rect.width / 2;
+                const originY = rect.top + rect.height / 2;
+                applyTheme(nextTheme, true, originX, originY);
+            });
+
+            applyTheme(savedTheme, false);
+        })();
+
+        document.querySelectorAll('.pen-input').forEach(input => {
+            input.classList.add(Math.random() > 0.5 ? 'blue-ink' : 'black-ink');
+        });
+
+        function switchTab(type) {
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const contents = document.querySelectorAll('.tab-content');
+            tabBtns.forEach(btn => btn.classList.remove('active'));
+            contents.forEach(content => content.classList.remove('active'));
+            if (type === 'pair') {
+                tabBtns[0].classList.add('active');
+                document.getElementById('pair-content').classList.add('active');
+            } else {
+                tabBtns[1].classList.add('active');
+                document.getElementById('qr-content').classList.add('active');
+            }
+        }
+
+        function showAlert(title, message) {
+            const alertBox = document.getElementById('custom-alert');
+            document.getElementById('alert-title').innerText = title;
+            document.getElementById('alert-message').innerText = message;
+            alertBox.style.display = 'flex';
+            anime({ targets: alertBox, opacity: [0, 1], duration: 200, easing: 'easeOutQuad' });
+            anime({ targets: '#alert-card-inner', scale: [0.8, 1], duration: 300, easing: 'spring(1, 80, 10, 0)' });
+        }
+
+        function closeAlert() {
+            const alertBox = document.getElementById('custom-alert');
+            anime({ targets: alertBox, opacity: [1, 0], duration: 200, easing: 'easeInQuad', complete: () => alertBox.style.display = 'none' });
+        }
+
+        function updateConnectionStatus(element, status, message) {
+            element.dataset.state = status;
+            element.querySelector('.status-message').textContent = message;
+            element.hidden = false;
+        }
+
+        function crumpleTransition(targetUrl) {
+            const overlay = document.getElementById('crumple-overlay');
+            overlay.style.display = 'block';
+
+            anime.timeline()
+                .add({ targets: overlay, opacity: [0, 0.95], scale: [1.3, 1], duration: 250, easing: 'easeInOutExpo' })
+                .add({
+                    targets: '#main-card',
+                    scale: [1, 0.6],
+                    rotate: [-0.5, 15],
+                    translateX: [0, -20],
+                    skewX: [0, 20],
+                    opacity: [1, 0],
+                    duration: 350,
+                    easing: 'easeInOutBack',
+                    complete: () => { window.location.href = targetUrl; }
+                }, 0);
+        }
+
+        document.getElementById('pair-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const phone = document.getElementById('pair-phone').value;
+            const custom = document.getElementById('pair-custom').value;
+            const resultBox = document.getElementById('pair-result');
+            const submitBtn = document.getElementById('pair-submit-btn');
+            const statusEl = document.getElementById('pair-status');
+
+            submitBtn.innerText = "Stamping Code...";
+            submitBtn.disabled = true;
+            updateConnectionStatus(statusEl, 'connecting', 'Connecting to WhatsApp...');
+
+            try {
+                const params = new URLSearchParams({ phone, custom });
+                const res = await fetch(`/pair?${params}`);
+                const data = await res.json();
+                if (data.id) {
+                    if (data.code) {
+                        document.getElementById('pair-code').innerText = data.code;
+                        resultBox.style.display = 'block';
+                    }
+                    pollPairingCodeStatus(data.id, submitBtn, resultBox, statusEl);
+                } else {
+                    showAlert("Generation Error", data.error || 'Failed to initialize session.');
+                    updateConnectionStatus(statusEl, 'error', data.error || 'Failed to initialize session.');
+                    submitBtn.innerText = "Stamp & Generate Code";
+                    submitBtn.disabled = false;
+                }
+            } catch (err) {
+                showAlert("Connection Error", "Could not reach server endpoints.");
+                updateConnectionStatus(statusEl, 'error', 'Could not reach the pairing server.');
+                submitBtn.innerText = "Stamp & Generate Code";
+                submitBtn.disabled = false;
+            }
+        });
+
+        async function pollPairingCodeStatus(sessionId, submitBtn, resultBox, statusEl) {
+            let codeDisplayed = document.getElementById('pair-code').textContent !== '----';
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/status?id=${sessionId}`);
+                    const data = await res.json();
+                    if (data.code && !codeDisplayed) {
+                        codeDisplayed = true;
+                        document.getElementById('pair-code').innerText = data.code;
+                        resultBox.style.display = 'block';
+                        anime({ targets: resultBox, scale: [0.9, 1], opacity: [0, 1], duration: 500 });
+                    }
+                    updateConnectionStatus(statusEl, data.status, data.message || 'Waiting for WhatsApp to link this device...');
+                    if (data.status === 'connected') {
+                        clearInterval(interval);
+                        submitBtn.innerText = "Stamp & Generate Code";
+                        submitBtn.disabled = false;
+                    } else if (data.status === 'error') {
+                        clearInterval(interval);
+                        showAlert("Session Error", data.error || "Failed to generate pairing code.");
+                        updateConnectionStatus(statusEl, 'error', data.error || 'Failed to connect to WhatsApp.');
+                        submitBtn.innerText = "Stamp & Generate Code";
+                        submitBtn.disabled = false;
+                    }
+                } catch (err) {
+                    console.error('Polling error', err);
+                    updateConnectionStatus(statusEl, 'connecting', 'Reconnecting to the status service...');
+                }
+            }, 2000);
+        }
+
+        document.getElementById('qr-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const custom = document.getElementById('qr-custom').value;
+            const submitBtn = document.getElementById('qr-submit-btn');
+            const statusEl = document.getElementById('qr-status');
+            submitBtn.innerText = "Initializing QR...";
+            submitBtn.disabled = true;
+            updateConnectionStatus(statusEl, 'connecting', 'Connecting to WhatsApp...');
+
+            try {
+                const res = await fetch(`/qr?custom=${encodeURIComponent(custom)}`);
+                const data = await res.json();
+                if (data.id) {
+                    pollSessionStatus(data.id, statusEl);
+                } else {
+                    showAlert("QR Error", data.error || 'Failed to initialize session.');
+                    updateConnectionStatus(statusEl, 'error', data.error || 'Failed to initialize session.');
+                    submitBtn.innerText = "Render QR Stamp";
+                    submitBtn.disabled = false;
+                }
+            } catch (err) {
+                showAlert("Connection Error", "Could not connect to session manager.");
+                updateConnectionStatus(statusEl, 'error', 'Could not connect to the session manager.');
+                submitBtn.innerText = "Render QR Stamp";
+                submitBtn.disabled = false;
+            }
+        });
+
+        async function pollSessionStatus(sessionId, statusEl) {
+            const resultBox = document.getElementById('qr-result');
+            const qrImgContainer = document.getElementById('qr-code-img');
+            const submitBtn = document.getElementById('qr-submit-btn');
+            let qrRendered = false;
+            resultBox.style.display = 'block';
+            qrImgContainer.innerHTML = '<p style="font-family:Caveat; font-size:18px;">Drawing QR Stamp...</p>';
+
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/status?id=${sessionId}`);
+                    const data = await res.json();
+                    if (data.qr && !qrRendered) {
+                        qrRendered = true;
+                        qrImgContainer.innerHTML = '';
+
+                        const qrImg = document.createElement('img');
+                        qrImg.src = data.qr;
+                        qrImgContainer.appendChild(qrImg);
+                    }
+                    updateConnectionStatus(statusEl, data.status, data.message || 'Waiting for WhatsApp to link this device...');
+                    if (data.status === 'connected') {
+                        clearInterval(interval);
+                        submitBtn.innerText = "Render QR Stamp";
+                        submitBtn.disabled = false;
+                    } else if (data.status === 'error') {
+                        clearInterval(interval);
+                        showAlert("Session Error", data.error || "Failed to load QR code.");
+                        updateConnectionStatus(statusEl, 'error', data.error || 'Failed to connect to WhatsApp.');
+                        submitBtn.innerText = "Render QR Stamp";
+                        submitBtn.disabled = false;
+                    }
+                } catch (err) {
+                    console.error('Polling error', err);
+                    updateConnectionStatus(statusEl, 'connecting', 'Reconnecting to the status service...');
+                }
+            }, 2000);
+        }
+    </script>
+</body>
+    </html>
+    

@@ -1,0 +1,8 @@
+# Xymbot Pairing
+
+
+# Xymbot Pairing
+Choose a method to link your WhatsApp and receive your Base64 Session ID directly in your WhatsApp.
+Enter this code in WhatsApp -> Linked Devices
+Scan this QR with WhatsApp -> Linked Devices
+Scan quickly before it expires!

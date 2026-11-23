@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xymbot • Hand-Crafted Portal</title>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="symbiotic-style.css">
+    <title>Xymbot • Pair Portal</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&family=Special+Elite&display=swap"
+        rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <style>
         :root {
@@ -42,11 +44,15 @@
             --symbiote-tendril: #e6edf3;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             background-color: var(--paper-bg);
-            background-image: 
+            background-image:
                 linear-gradient(to right, var(--paper-line) 1px, transparent 1px),
                 linear-gradient(to bottom, var(--paper-line) 1px, transparent 1px);
             background-size: 24px 24px;
@@ -62,7 +68,10 @@
 
         #crumple-overlay {
             position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             background: #d8d3c5;
             background-image: radial-gradient(#b8b1a2 20%, transparent 21%), radial-gradient(#b8b1a2 20%, transparent 21%);
             background-size: 40px 40px;
@@ -89,7 +98,9 @@
         .notebook-card::before {
             content: '';
             position: absolute;
-            top: 0; bottom: 0; left: 45px;
+            top: 0;
+            bottom: 0;
+            left: 45px;
             width: 2px;
             background: var(--margin-red);
         }
@@ -136,10 +147,18 @@
             transform: scale(1.05);
         }
 
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        .tab-content {
+            display: none;
+        }
 
-        .input-group { margin-bottom: 22px; }
+        .tab-content.active {
+            display: block;
+        }
+
+        .input-group {
+            margin-bottom: 22px;
+        }
+
         .input-group label {
             display: block;
             font-size: 14px;
@@ -160,8 +179,13 @@
             letter-spacing: 1px;
         }
 
-        input.blue-ink { color: var(--ink-blue); }
-        input.black-ink { color: var(--ink-black); }
+        input.blue-ink {
+            color: var(--ink-blue);
+        }
+
+        input.black-ink {
+            color: var(--ink-black);
+        }
 
         input::placeholder {
             color: #b5a88c;
@@ -212,7 +236,11 @@
             line-height: 1.35;
             text-align: left;
         }
-        .connection-status[hidden] { display: none; }
+
+        .connection-status[hidden] {
+            display: none;
+        }
+
         .status-dot {
             width: 10px;
             height: 10px;
@@ -220,15 +248,26 @@
             border-radius: 50%;
             background: var(--pencil);
         }
+
         .connection-status[data-state="connecting"] .status-dot,
         .connection-status[data-state="linking"] .status-dot {
             background: #d98b20;
             animation: status-pulse 1.2s ease-in-out infinite;
         }
-        .connection-status[data-state="connected"] .status-dot { background: #30834a; }
-        .connection-status[data-state="error"] .status-dot { background: var(--accent-red); }
+
+        .connection-status[data-state="connected"] .status-dot {
+            background: #30834a;
+        }
+
+        .connection-status[data-state="error"] .status-dot {
+            background: var(--accent-red);
+        }
+
         @keyframes status-pulse {
-            50% { opacity: 0.35; transform: scale(0.82); }
+            50% {
+                opacity: 0.35;
+                transform: scale(0.82);
+            }
         }
 
         .code-display {
@@ -249,6 +288,7 @@
             display: inline-block;
             margin-top: 10px;
         }
+
         .qr-display img {
             display: block;
             margin: 0 auto;
@@ -258,40 +298,92 @@
 
         #custom-alert {
             position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             background: rgba(0, 0, 0, 0.4);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 1000; display: none; opacity: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+            opacity: 0;
         }
 
         .alert-card {
             background: var(--paper-sheet);
             border: 2px solid var(--ink-blue);
-            padding: 30px; max-width: 380px; width: 90%;
-            text-align: center; box-shadow: 6px 6px 0px var(--card-shadow);
+            padding: 30px;
+            max-width: 380px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 6px 6px 0px var(--card-shadow);
             transform: scale(0.9);
         }
 
-        .alert-card h3 { font-family: 'Kalam', cursive; font-size: 24px; color: var(--accent-red); margin-bottom: 10px; }
-        .alert-card p { font-family: 'Caveat', cursive; font-size: 20px; color: var(--ink-black); margin-bottom: 20px; }
-        .alert-btn { background: var(--ink-blue); color: #fff; border: 1px solid var(--ink-black); padding: 8px 24px; font-family: 'Kalam', cursive; font-size: 18px; cursor: pointer; }
+        .alert-card h3 {
+            font-family: 'Kalam', cursive;
+            font-size: 24px;
+            color: var(--accent-red);
+            margin-bottom: 10px;
+        }
+
+        .alert-card p {
+            font-family: 'Caveat', cursive;
+            font-size: 20px;
+            color: var(--ink-black);
+            margin-bottom: 20px;
+        }
+
+        .alert-btn {
+            background: var(--ink-blue);
+            color: #fff;
+            border: 1px solid var(--ink-black);
+            padding: 8px 24px;
+            font-family: 'Kalam', cursive;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .theme-toggle-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 14px;
+            background: var(--paper-sheet);
+            border: 2px solid var(--ink-black);
+            color: var(--ink-black);
+            font-family: 'Special Elite', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 3px 3px 0px var(--card-shadow);
+            z-index: 1000;
+        }
+
+        .theme-toggle-btn:active {
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0px var(--card-shadow);
+        }
 
         .footer-scribbles {
-            margin-top: 30px; display: flex; justify-content: space-between;
-            font-family: 'Caveat', cursive; font-size: 18px;
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Caveat', cursive;
+            font-size: 18px;
         }
-        .footer-scribbles a { color: var(--ink-blue); text-decoration: underline; cursor: pointer; }
+
+        .footer-scribbles a {
+            color: var(--ink-blue);
+            text-decoration: underline;
+            cursor: pointer;
+        }
     </style>
 </head>
-<body>
-    <canvas id="symbiote-canvas"></canvas>
 
-    <div class="symbiote-toggle-wrap">
-        <button id="theme-toggle" class="symbiote-toggle-btn" aria-label="Toggle symbiotic theme mode" title="Shift Symbiotic State">
-            <span class="symbiote-orb" id="symbiote-orb"></span>
-            <span id="theme-label">Light Organism</span>
-        </button>
-    </div>
+<body>
+    <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle theme">Dark Mode</button>
 
     <div id="crumple-overlay"></div>
 
@@ -305,31 +397,32 @@
 
     <div class="notebook-card" id="main-card">
         <div class="header">
-            <h1>Notebook Pairing Log</h1>
-            <p>// handwritten session & bot linkage portal • 🤍⃞ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓</p>
+            <h1>Bot Pairing Log</h1>
+            <p>// custom session & bot linkage portal • 🤍⃞ꪶ𝐒͢ʏ᪳ᴀ͓ᴍ͎ ͢𝐒ᴇ͓ꪳʀ͎𖦻⃞🍓</p>
         </div>
 
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('pair')">01. Pairing Code</button>
-            <button class="tab-btn" onclick="switchTab('qr')">02. QR Stamp</button>
+            <button class="tab-btn" onclick="switchTab('qr')">02. QR Generate</button>
         </div>
 
         <div id="pair-content" class="tab-content active">
             <form id="pair-form">
                 <div class="input-group">
-                    <label>Session Name Scribble:</label>
+                    <label>Session Name :</label>
                     <input type="text" id="pair-custom" class="pen-input" placeholder="e.g. sneha-bot" required>
                 </div>
                 <div class="input-group">
                     <label>Phone Digits:</label>
                     <input type="tel" id="pair-phone" class="pen-input" placeholder="e.g. 919876543210" required>
                 </div>
-                <button type="submit" class="stamp-btn" id="pair-submit-btn">Stamp & Generate Code</button>
+                <button type="submit" class="stamp-btn" id="pair-submit-btn"> Generate Code</button>
             </form>
 
             <div id="pair-result" class="result-box">
                 <h3 style="font-family:'Kalam'; color:var(--ink-blue)">Assigned Pairing Code:</h3>
-                <p style="font-family:'Caveat'; font-size:18px; color:var(--pencil)">Copy this into your WhatsApp linked devices:</p>
+                <p style="font-family:'Caveat'; font-size:18px; color:var(--pencil)">Copy this into your WhatsApp linked
+                    devices:</p>
                 <code class="code-display" id="pair-code">----</code>
             </div>
             <div class="connection-status" id="pair-status" role="status" aria-live="polite" hidden>
@@ -341,15 +434,16 @@
         <div id="qr-content" class="tab-content">
             <form id="qr-form">
                 <div class="input-group">
-                    <label>Session Name Scribble:</label>
+                    <label>Session Name :</label>
                     <input type="text" id="qr-custom" class="pen-input" placeholder="e.g. sneha-bot" required>
                 </div>
-                <button type="submit" class="stamp-btn" id="qr-submit-btn">Render QR Stamp</button>
+                <button type="submit" class="stamp-btn" id="qr-submit-btn"> QR Stamp</button>
             </form>
 
             <div id="qr-result" class="result-box">
-                <h3 style="font-family:'Kalam'; color:var(--ink-blue)">Scan Paper QR:</h3>
-                <p style="font-family:'Caveat'; font-size:18px; color:var(--pencil)">Point phone camera to scan configuration code.</p>
+                <h3 style="font-family:'Kalam'; color:var(--ink-blue)">Scan QR:</h3>
+                <p style="font-family:'Caveat'; font-size:18px; color:var(--pencil)">Point phone camera to scan
+                    configuration code.</p>
                 <div class="qr-display" id="qr-code-img"></div>
             </div>
             <div class="connection-status" id="qr-status" role="status" aria-live="polite" hidden>
@@ -364,13 +458,25 @@
         </div>
     </div>
 
-    <script src="symbiotic-engine.js"></script>
     <script>
-        SymbioticWatercolor.init({
-            canvasId: 'symbiote-canvas',
-            toggleId: 'theme-toggle',
-            labelId: 'theme-label'
-        });
+        (function() {
+            const toggleBtn = document.getElementById('theme-toggle');
+            const savedTheme = localStorage.getItem('xymbot_theme') ||
+                (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+            function setTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('xymbot_theme', theme);
+                toggleBtn.textContent = theme === 'dark' ? '☀ Light Mode' : '🌙 Dark Mode';
+            }
+
+            toggleBtn.addEventListener('click', () => {
+                const current = document.documentElement.getAttribute('data-theme') || 'light';
+                setTheme(current === 'dark' ? 'light' : 'dark');
+            });
+
+            setTheme(savedTheme);
+        })();
 
         document.querySelectorAll('.pen-input').forEach(input => {
             input.classList.add(Math.random() > 0.5 ? 'blue-ink' : 'black-ink');
@@ -564,5 +670,5 @@
         }
     </script>
 </body>
-    </html>
-    
+
+</html>

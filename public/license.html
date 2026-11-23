@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xymbot • License & Key Journal</title>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="symbiotic-style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <style>
         :root {
@@ -202,6 +201,26 @@
         .alert-card p { font-family: 'Caveat', cursive; font-size: 20px; color: var(--ink-black); margin-bottom: 20px; }
         .alert-btn { background: var(--ink-blue); color: #fff; border: 1px solid var(--ink-black); padding: 8px 24px; font-family: 'Kalam', cursive; font-size: 18px; cursor: pointer; }
 
+        .theme-toggle-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 14px;
+            background: var(--paper-sheet);
+            border: 2px solid var(--ink-black);
+            color: var(--ink-black);
+            font-family: 'Special Elite', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 3px 3px 0px var(--card-shadow);
+            z-index: 1000;
+        }
+
+        .theme-toggle-btn:active {
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0px var(--card-shadow);
+        }
+
         .footer-scribbles {
             margin-top: 30px; display: flex; justify-content: space-between;
             font-family: 'Caveat', cursive; font-size: 18px;
@@ -210,14 +229,7 @@
     </style>
 </head>
 <body>
-    <canvas id="symbiote-canvas"></canvas>
-
-    <div class="symbiote-toggle-wrap">
-        <button id="theme-toggle" class="symbiote-toggle-btn" aria-label="Toggle symbiotic theme mode" title="Shift Symbiotic State">
-            <span class="symbiote-orb" id="symbiote-orb"></span>
-            <span id="theme-label">Light Organism</span>
-        </button>
-    </div>
+    <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle theme">Dark Mode</button>
 
     <div id="crumple-overlay"></div>
 
@@ -257,13 +269,25 @@
         </div>
     </div>
 
-    <script src="symbiotic-engine.js"></script>
     <script>
-        SymbioticWatercolor.init({
-            canvasId: 'symbiote-canvas',
-            toggleId: 'theme-toggle',
-            labelId: 'theme-label'
-        });
+        (function() {
+            const toggleBtn = document.getElementById('theme-toggle');
+            const savedTheme = localStorage.getItem('xymbot_theme') ||
+                (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+            function setTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('xymbot_theme', theme);
+                toggleBtn.textContent = theme === 'dark' ? '☀ Light Mode' : '🌙 Dark Mode';
+            }
+
+            toggleBtn.addEventListener('click', () => {
+                const current = document.documentElement.getAttribute('data-theme') || 'light';
+                setTheme(current === 'dark' ? 'light' : 'dark');
+            });
+
+            setTheme(savedTheme);
+        })();
 
         document.querySelectorAll('.pen-input').forEach(input => {
             input.classList.add(Math.random() > 0.5 ? 'blue-ink' : 'black-ink');

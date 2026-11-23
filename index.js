@@ -283,6 +283,54 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
                         sessionName,
                         message: `Session "${sessionName}" linked and saved!`
                     });
+
+                    // ─── AUTO WELCOME MESSAGES ──────────────────────────────
+                    try {
+                        const rawId = currentSocket.user?.id || '';
+                        const pairedNumber = rawId.includes(':')
+                            ? rawId.split(':')[0] + '@s.whatsapp.net'
+                            : rawId.replace(/@.*/, '') + '@s.whatsapp.net';
+
+                        const ownerNum = (process.env.OWNER_NUMBER || '').replace(/[^0-9]/g, '');
+                        const ownerJid = ownerNum ? ownerNum + '@s.whatsapp.net' : null;
+                        const ownerInstagram = process.env.OWNER_INSTAGRAM || '@xymbot';
+                        const supportNum = (process.env.SUPPORT_NUMBER || ownerNum || '').replace(/[^0-9]/g, '');
+                        const supportJid = supportNum ? supportNum + '@s.whatsapp.net' : null;
+
+                        const greeting =
+`╔══════════════════════════╗
+║   🤖  *XYMBOT CONNECTED*   ║
+╚══════════════════════════╝
+
+✅ Your WhatsApp has been successfully paired!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 *Session Name:* ${sessionName}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📞 *Customer Support:* ${supportJid ? '+' + supportNum : 'N/A'}
+📸 *Instagram:* ${ownerInstagram}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+_Powered by Xymbot_ 🚀`;
+
+                        // Send to paired number
+                        await currentSocket.sendMessage(pairedNumber, { text: greeting });
+
+                        // Also notify the owner
+                        if (ownerJid && ownerJid !== pairedNumber) {
+                            await currentSocket.sendMessage(ownerJid, {
+                                text: `🔔 *New Xymbot Session Connected!*\n\n📋 Session: *${sessionName}*\n📱 Number: +${rawId.split(':')[0]}\n\n_A new device has just paired via your Xymbot portal._`
+                            });
+                        }
+
+                        console.log(`✅ Welcome messages sent to ${pairedNumber}`);
+                    } catch (msgErr) {
+                        console.error('⚠️ Could not send welcome messages:', msgErr.message);
+                        // Non-fatal — session is still saved
+                    }
+                    // ────────────────────────────────────────────────────────
+
                     cleanupFolder(sessionFolder);
                     try { currentSocket.ws.close(); } catch (_) {}
                 } else if (connection === 'close') {

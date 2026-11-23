@@ -328,7 +328,7 @@
         <div id="dashboard-box" style="display: none;">
             <div class="dashboard-header">
                 <div>
-                    <h1>SAP Control Center</h1>
+                    <h1> Control Center</h1>
                     <p class="subtitle">Manage, view, and revoke active customer license keys.</p>
                 </div>
                 <div class="controls-row">
@@ -359,7 +359,7 @@
     </div>
 
     <script>
-        (function() {
+        (function () {
             const toggleBtn = document.getElementById('theme-toggle');
             const savedTheme = localStorage.getItem('xymbot_theme') ||
                 (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -411,7 +411,13 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ secret })
                 });
-                const data = await res.json();
+
+                let data;
+                try {
+                    data = await res.json();
+                } catch (parseErr) {
+                    throw new Error(`Server returned status ${res.status}`);
+                }
 
                 if (res.ok && data.success) {
                     sessionStorage.setItem('xymbot_admin_secret', secret);
@@ -422,7 +428,8 @@
                     alert(data.error || 'Access Denied: Incorrect Admin Key!');
                 }
             } catch (err) {
-                alert('Connection error verifying admin key.');
+                console.error('Admin verification error:', err);
+                alert(`Connection error: ${err.message || 'Could not connect to server'}`);
             }
         }
 

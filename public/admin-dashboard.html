@@ -398,91 +398,54 @@
             document.getElementById('login-box').style.display = 'block';
         }
 
-        async function verifyAdmin() {
-            const secret = document.getElementById('admin-secret').value.trim();
-            if (!secret) {
-                alert('Please enter your admin secret key!');
-                return;
-            }
+        const res = await fetch('/api/admin/keys', { headers: getAdminHeaders() });
+        const data = await res.json();
 
-            try {
-                const res = await fetch('/api/admin/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ secret })
-                });
-
-                let data;
-                try {
-                    data = await res.json();
-                } catch (parseErr) {
-                    throw new Error(`Server returned status ${res.status}`);
-                }
-
-                if (res.ok && data.success) {
-                    sessionStorage.setItem('xymbot_admin_secret', secret);
-                    document.getElementById('login-box').style.display = 'none';
-                    document.getElementById('dashboard-box').style.display = 'block';
-                    fetchKeys();
-                } else {
-                    alert(data.error || 'Access Denied: Incorrect Admin Key!');
-                }
-            } catch (err) {
-                console.error('Admin verification error:', err);
-                alert(`Connection error: ${err.message || 'Could not connect to server'}`);
-            }
+        if (res.status === 401) {
+            logoutAdmin();
+            alert('Session expired or unauthorized. Please sign in again.');
+            return;
         }
 
-        async function fetchKeys() {
-            try {
-                const res = await fetch('/api/admin/keys', { headers: getAdminHeaders() });
-                const data = await res.json();
+        const tbody = document.getElementById('keys-table-body');
+        tbody.innerHTML = '';
 
-                if (res.status === 401) {
-                    logoutAdmin();
-                    alert('Session expired or unauthorized. Please sign in again.');
-                    return;
-                }
+        if (data.keys && data.keys.length > 0) {
+            data.keys.forEach(k => {
+                const isExpired = k.expiresAt && new Date() > new Date(k.expiresAt);
+                const statusColor = isExpired
+                    ? 'var(--accent-red)'
+                    : (k.isActivated ? 'var(--success)' : 'var(--text-muted)');
+                const statusText = isExpired
+                    ? 'Expired'
+                    : (k.isActivated ? 'Active' : 'Unused');
 
-                const tbody = document.getElementById('keys-table-body');
-                tbody.innerHTML = '';
-
-                if (data.keys && data.keys.length > 0) {
-                    data.keys.forEach(k => {
-                        const isExpired = k.expiresAt && new Date() > new Date(k.expiresAt);
-                        const statusColor = isExpired
-                            ? 'var(--accent-red)'
-                            : (k.isActivated ? 'var(--success)' : 'var(--text-muted)');
-                        const statusText = isExpired
-                            ? 'Expired'
-                            : (k.isActivated ? 'Active' : 'Unused');
-
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
+                const row = document.createElement('tr');
+                row.innerHTML = `
                             <td></td>
                             <td></td>
                             <td></td>
                             <td></td>
                             <td><button type="button" class="action-btn btn-delete">Revoke</button></td>
                         `;
-                        row.children[0].textContent = k.key;
-                        row.children[1].textContent = k.boundSession || 'Unbound';
-                        row.children[2].textContent = k.expiresAt ? new Date(k.expiresAt).toLocaleDateString() : 'N/A';
+                row.children[0].textContent = k.key;
+                row.children[1].textContent = k.boundSession || 'Unbound';
+                row.children[2].textContent = k.expiresAt ? new Date(k.expiresAt).toLocaleDateString() : 'N/A';
 
-                        const statusSpan = document.createElement('span');
-                        statusSpan.style.color = statusColor;
-                        statusSpan.textContent = statusText;
-                        row.children[3].appendChild(statusSpan);
+                const statusSpan = document.createElement('span');
+                statusSpan.style.color = statusColor;
+                statusSpan.textContent = statusText;
+                row.children[3].appendChild(statusSpan);
 
-                        row.children[4].querySelector('button').addEventListener('click', () => revokeKey(k._id));
-                        tbody.appendChild(row);
-                    });
-                } else {
-                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No license keys found in database.</td></tr>`;
-                }
+                row.children[4].querySelector('button').addEventListener('click', () => revokeKey(k._id));
+                tbody.appendChild(row);
+            });
+        } else {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No license keys found in database.</td></tr>`;
+        }
             } catch (err) {
-                console.error('Failed to load keys', err);
-            }
+            console.error('Failed to load keys', err);
+        }
         }
 
         async function generateKey() {

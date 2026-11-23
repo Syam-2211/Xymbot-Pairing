@@ -6,7 +6,8 @@ import mongoose from 'mongoose';
 import { fileURLToPath } from 'url';
 import makeWASocket, {
     useMultiFileAuthState,
-    delay
+    delay,
+    DisconnectReason
 } from '@whiskeysockets/baileys';
 import qrcode from 'qrcode';
 import { verifyLicense, generateRandomKey, clientGenerateKey } from './src/licenseManager.js';
@@ -201,10 +202,12 @@ function normalizeSessionName(value) {
     return /^[a-z0-9][a-z0-9_-]{2,39}$/.test(name) ? name : null;
 }
 
-function startPairingSocket({ sessionId, sessionName, sessionFolder, state, saveCreds, generateQr }) {
+function startPairingSocket({ sessionId, sessionName, sessionFolder, state: initialAuthState, saveCreds: initialSaveCreds, generateQr }) {
     let socket;
     let restartCount = 0;
     let completed = false;
+    let authState = initialAuthState;
+    let saveCredsHandler = initialSaveCreds;
     let saveCredentials = Promise.resolve();
     let saveError;
 
@@ -215,7 +218,7 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
         });
 
         socket = makeWASocket({
-            auth: state,
+            auth: authState,
             printQRInTerminal: false,
             logger: pino({ level: 'warn' }),
             syncFullHistory: false,
@@ -225,7 +228,7 @@ function startPairingSocket({ sessionId, sessionName, sessionFolder, state, save
 
         currentSocket.ev.on('creds.update', (update) => {
             saveCredentials = saveCredentials
-                .then(() => saveCreds(update))
+                .then(() => saveCredsHandler(update))
                 .catch((error) => {
                     saveError = error;
                     console.error(`Could not save credentials for session ${sessionId}:`, error);
@@ -335,17 +338,34 @@ _Powered by Xymbot_ 🚀`;
                     try { currentSocket.ws.close(); } catch (_) {}
                 } else if (connection === 'close') {
                     if (activePairings.get(sessionId)?.status === 'connected') return;
-                    const statusCode = lastDisconnect?.error?.output?.statusCode;
-                    const detail = lastDisconnect?.error?.message || 'WhatsApp connection closed';
 
-                    if (statusCode === 515 && restartCount < 3) {
+                    const statusCode = lastDisconnect?.error?.output?.statusCode
+                        || lastDisconnect?.error?.statusCode
+                        || (String(lastDisconnect?.error?.message || '').includes('515') ? 515 : null);
+                    const detail = lastDisconnect?.error?.message || 'WhatsApp connection closed';
+                    const isRestartRequired = statusCode === 515
+                        || statusCode === DisconnectReason?.restartRequired
+                        || String(detail).includes('515')
+                        || String(detail).toLowerCase().includes('restart required');
+
+                    if (isRestartRequired && restartCount < 5) {
                         restartCount += 1;
                         activePairings.set(sessionId, {
                             status: 'linking',
-                            message: 'WhatsApp is restarting the connection...'
+                            message: 'WhatsApp requested connection restart. Reconnecting...'
                         });
                         await saveCredentials;
-                        if (!completed && currentSocket === socket) start();
+                        await delay(2000);
+                        if (!completed) {
+                            try {
+                                const refreshedAuth = await useMultiFileAuthState(sessionFolder);
+                                authState = refreshedAuth.state;
+                                saveCredsHandler = refreshedAuth.saveCreds;
+                            } catch (refreshErr) {
+                                console.warn('Could not refresh auth state from disk:', refreshErr.message);
+                            }
+                            start();
+                        }
                         return;
                     }
 

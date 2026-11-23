@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xymbot • SAP Admin Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+    <title>Xymbot • Admin Dashboard</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Kalam:wght@400;700&family=Special+Elite&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="symbiotic-style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <style>
         :root {
@@ -25,6 +29,7 @@
             --td-border: #e8e1d3;
             --symbiote-glow: rgba(0, 240, 255, 0.25);
         }
+
         [data-theme="dark"] {
             --paper-bg: #0d1117;
             --paper-line: #1c2333;
@@ -43,7 +48,13 @@
             --td-border: #232c3d;
             --symbiote-glow: rgba(88, 166, 255, 0.4);
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: 'Special Elite', monospace;
             background-color: var(--paper-bg);
@@ -57,6 +68,7 @@
             padding: 24px;
             transition: background 0.4s ease, color 0.4s ease;
         }
+
         .container {
             width: 100%;
             max-width: 1000px;
@@ -68,6 +80,7 @@
             transform: rotate(-0.2deg);
             transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
         }
+
         .container::before {
             content: '';
             position: absolute;
@@ -77,23 +90,31 @@
             width: 2px;
             background: var(--margin-red);
         }
+
         h1 {
             color: var(--ink-blue);
             font: 700 28px 'Kalam', cursive;
             margin-bottom: 6px;
         }
+
         .subtitle {
             color: var(--pencil);
             font: 600 19px 'Caveat', cursive;
             margin-bottom: 24px;
         }
-        .input-group { margin-bottom: 16px; text-align: left; }
+
+        .input-group {
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
         .input-group label {
             display: block;
             color: var(--ink-blue);
             font: 700 15px 'Kalam', cursive;
             margin-bottom: 6px;
         }
+
         input {
             width: 100%;
             padding: 12px 8px;
@@ -104,7 +125,11 @@
             font: 16px 'Special Elite', monospace;
             outline: none;
         }
-        input:focus { border-bottom-color: var(--ink-blue); }
+
+        input:focus {
+            border-bottom-color: var(--ink-blue);
+        }
+
         .btn-primary {
             position: relative;
             overflow: hidden;
@@ -117,24 +142,40 @@
             box-shadow: 4px 4px 0 var(--card-shadow);
             transition: transform 0.1s ease, box-shadow 0.1s ease;
         }
+
         .btn-primary::after {
             content: '';
             position: absolute;
-            top: -50%; left: -50%; width: 200%; height: 200%;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
             background: radial-gradient(circle, var(--symbiote-glow) 10%, transparent 60%);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.4s ease;
         }
+
         .btn-primary:hover::after {
             opacity: 1;
             animation: symbiote-tendril-swell 3s ease-in-out infinite alternate;
         }
+
         @keyframes symbiote-tendril-swell {
-            0% { transform: scale(0.85) rotate(0deg); }
-            100% { transform: scale(1.15) rotate(15deg); }
+            0% {
+                transform: scale(0.85) rotate(0deg);
+            }
+
+            100% {
+                transform: scale(1.15) rotate(15deg);
+            }
         }
-        .btn-primary:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--card-shadow); }
+
+        .btn-primary:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 var(--card-shadow);
+        }
+
         .dashboard-header {
             display: flex;
             justify-content: space-between;
@@ -143,12 +184,14 @@
             flex-wrap: wrap;
             margin-bottom: 16px;
         }
+
         .controls-row {
             display: flex;
             align-items: center;
             gap: 10px;
             flex-wrap: wrap;
         }
+
         .days-input {
             width: 90px;
             padding: 8px 10px;
@@ -157,6 +200,7 @@
             font-size: 14px;
             text-align: center;
         }
+
         .sap-table-wrap {
             overflow-x: auto;
             margin-top: 16px;
@@ -164,9 +208,30 @@
             border: 1px dashed var(--card-border);
             background: var(--table-wrap-bg);
         }
-        table { width: 100%; min-width: 700px; border-collapse: collapse; text-align: left; font-size: 13px; }
-        th { background: var(--th-bg); color: var(--ink-blue); padding: 12px; font: 700 15px 'Kalam', cursive; border-bottom: 2px solid var(--paper-line); }
-        td { padding: 12px; color: var(--ink-black); border-bottom: 1px solid var(--td-border); font: 13px 'Special Elite', monospace; }
+
+        table {
+            width: 100%;
+            min-width: 700px;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th {
+            background: var(--th-bg);
+            color: var(--ink-blue);
+            padding: 12px;
+            font: 700 15px 'Kalam', cursive;
+            border-bottom: 2px solid var(--paper-line);
+        }
+
+        td {
+            padding: 12px;
+            color: var(--ink-black);
+            border-bottom: 1px solid var(--td-border);
+            font: 13px 'Special Elite', monospace;
+        }
+
         .action-btn {
             padding: 5px 10px;
             border: 1px solid var(--accent-red);
@@ -175,7 +240,12 @@
             font: 700 13px 'Kalam', cursive;
             cursor: pointer;
         }
-        .action-btn:hover { background: var(--accent-red); color: #fff; }
+
+        .action-btn:hover {
+            background: var(--accent-red);
+            color: #fff;
+        }
+
         .logout-btn {
             padding: 8px 14px;
             border: 1px solid var(--card-border);
@@ -184,21 +254,30 @@
             font: 700 14px 'Kalam', cursive;
             cursor: pointer;
         }
-        .logout-btn:hover { color: var(--ink-black); border-color: var(--ink-black); }
+
+        .logout-btn:hover {
+            color: var(--ink-black);
+            border-color: var(--ink-black);
+        }
 
         /* ─── SYMBIOTIC THEME TOGGLE ─── */
         #symbiote-canvas {
             position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             pointer-events: none;
             z-index: 9999;
         }
+
         .symbiote-toggle-wrap {
             position: fixed;
-            top: 20px; right: 20px;
+            top: 20px;
+            right: 20px;
             z-index: 10000;
         }
+
         .symbiote-toggle-btn {
             position: relative;
             display: inline-flex;
@@ -217,65 +296,119 @@
             border-radius: 999px;
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, background 0.3s ease, color 0.3s ease;
         }
+
         .symbiote-toggle-btn:hover {
             transform: translate(-2px, -2px) scale(1.03);
             box-shadow: 6px 6px 0px var(--card-shadow), 0 0 16px var(--symbiote-glow);
         }
+
         .symbiote-toggle-btn:active {
             transform: translate(2px, 2px) scale(0.97);
             box-shadow: 2px 2px 0px var(--card-shadow);
         }
+
         .symbiote-orb {
             position: relative;
-            width: 22px; height: 22px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             background: radial-gradient(circle at 35% 35%, #ffd166, #e76f51);
             box-shadow: 0 0 8px rgba(231, 111, 81, 0.6);
             transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
         }
+
         [data-theme="dark"] .symbiote-orb {
             background: radial-gradient(circle at 35% 35%, #00f0ff, #7928ca);
             box-shadow: 0 0 12px rgba(0, 240, 255, 0.8), inset 0 0 6px rgba(255, 255, 255, 0.6);
             transform: rotate(180deg);
         }
+
         .symbiote-orb::after {
             content: '';
             position: absolute;
-            top: -4px; left: -4px; right: -4px; bottom: -4px;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
             border-radius: 50%;
             border: 1.5px dashed var(--ink-blue);
             animation: symbiote-ring-spin 8s linear infinite;
             opacity: 0.7;
         }
+
         @keyframes symbiote-ring-spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
+
         .symbiote-toggle-btn.symbiotic-pulsing {
             animation: symbiote-organism-twitch 0.7s cubic-bezier(0.25, 1, 0.5, 1);
         }
+
         @keyframes symbiote-organism-twitch {
-            0% { transform: scale(1); }
-            20% { transform: scale(1.15) rotate(-3deg); filter: drop-shadow(0 0 18px var(--symbiote-glow)); }
-            45% { transform: scale(0.92) rotate(3deg); }
-            70% { transform: scale(1.06) rotate(-1deg); }
-            100% { transform: scale(1) rotate(0deg); }
+            0% {
+                transform: scale(1);
+            }
+
+            20% {
+                transform: scale(1.15) rotate(-3deg);
+                filter: drop-shadow(0 0 18px var(--symbiote-glow));
+            }
+
+            45% {
+                transform: scale(0.92) rotate(3deg);
+            }
+
+            70% {
+                transform: scale(1.06) rotate(-1deg);
+            }
+
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
         }
+
         @media (max-width: 640px) {
-            body { align-items: flex-start; padding: 14px; }
-            .container { padding: 30px 18px 24px 42px; }
-            .container::before { left: 28px; }
-            .dashboard-header { align-items: flex-start; flex-direction: column; }
-            .controls-row { width: 100%; }
-            .controls-row .btn-primary { flex: 1; }
+            body {
+                align-items: flex-start;
+                padding: 14px;
+            }
+
+            .container {
+                padding: 30px 18px 24px 42px;
+            }
+
+            .container::before {
+                left: 28px;
+            }
+
+            .dashboard-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .controls-row {
+                width: 100%;
+            }
+
+            .controls-row .btn-primary {
+                flex: 1;
+            }
         }
     </style>
 </head>
+
 <body>
     <canvas id="symbiote-canvas"></canvas>
 
     <div class="symbiote-toggle-wrap">
-        <button id="theme-toggle" class="symbiote-toggle-btn" aria-label="Toggle symbiotic theme mode" title="Shift Symbiotic State">
+        <button id="theme-toggle" class="symbiote-toggle-btn" aria-label="Toggle symbiotic theme mode"
+            title="Shift Symbiotic State">
             <span class="symbiote-orb" id="symbiote-orb"></span>
             <span id="theme-label">Light Organism</span>
         </button>
@@ -301,8 +434,10 @@
                     <p class="subtitle">Manage, view, and revoke active customer license keys.</p>
                 </div>
                 <div class="controls-row">
-                    <input type="number" id="key-duration-days" class="days-input" min="1" max="3650" value="30" title="Duration in days">
-                    <button type="button" class="btn-primary" style="padding: 10px 18px;" onclick="generateKey()">+ Generate Key</button>
+                    <input type="number" id="key-duration-days" class="days-input" min="1" max="3650" value="30"
+                        title="Duration in days">
+                    <button type="button" class="btn-primary" style="padding: 10px 18px;" onclick="generateKey()">+
+                        Generate Key</button>
                     <button type="button" class="logout-btn" onclick="logoutAdmin()">Lock</button>
                 </div>
             </div>
@@ -325,191 +460,13 @@
         </div>
     </div>
 
+    <script src="symbiotic-engine.js"></script>
     <script>
-        /* ─── SYMBIOTIC THEME ENGINE ─── */
-        (function initSymbioticEngine() {
-            const canvas = document.getElementById('symbiote-canvas');
-            const ctx = canvas.getContext('2d');
-            const toggleBtn = document.getElementById('theme-toggle');
-            const themeLabel = document.getElementById('theme-label');
-
-            let width, height;
-            function resize() {
-                width = canvas.width = window.innerWidth;
-                height = canvas.height = window.innerHeight;
-            }
-            window.addEventListener('resize', resize);
-            resize();
-
-            const savedTheme = localStorage.getItem('xymbot_theme') ||
-                (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-
-            function applyTheme(theme, animate = false, originX = width / 2, originY = height / 2) {
-                if (animate) {
-                    triggerSymbioticBurst(theme, originX, originY, () => {
-                        document.documentElement.setAttribute('data-theme', theme);
-                        localStorage.setItem('xymbot_theme', theme);
-                        themeLabel.textContent = theme === 'dark' ? 'Dark Parasite' : 'Light Organism';
-                    });
-                } else {
-                    document.documentElement.setAttribute('data-theme', theme);
-                    localStorage.setItem('xymbot_theme', theme);
-                    themeLabel.textContent = theme === 'dark' ? 'Dark Parasite' : 'Light Organism';
-                }
-            }
-
-            class SymbioteTendril {
-                constructor(ox, oy, color, targetRadius, speedMultiplier = 1) {
-                    this.ox = ox;
-                    this.oy = oy;
-                    this.color = color;
-                    this.maxRadius = targetRadius;
-                    this.currentRadius = 0;
-                    this.speed = (18 + Math.random() * 12) * speedMultiplier;
-                    this.branches = [];
-                    this.angle = Math.random() * Math.PI * 2;
-                    this.curve = (Math.random() - 0.5) * 0.08;
-                    this.width = 4 + Math.random() * 8;
-                    this.nodes = [{ x: ox, y: oy }];
-                    this.finished = false;
-                }
-
-                grow() {
-                    if (this.currentRadius >= this.maxRadius) {
-                        this.finished = true;
-                        return;
-                    }
-                    this.currentRadius += this.speed;
-                    this.angle += this.curve;
-                    const nextX = this.ox + Math.cos(this.angle) * this.currentRadius;
-                    const nextY = this.oy + Math.sin(this.angle) * this.currentRadius;
-                    this.nodes.push({ x: nextX, y: nextY });
-                    if (this.nodes.length > 25) this.nodes.shift();
-
-                    if (Math.random() < 0.08 && this.branches.length < 3) {
-                        this.branches.push(new SymbioteTendril(nextX, nextY, this.color, this.maxRadius * 0.45, 0.7));
-                    }
-                    this.branches.forEach(b => b.grow());
-                }
-
-                draw(ctx) {
-                    if (this.nodes.length < 2) return;
-                    ctx.save();
-                    ctx.strokeStyle = this.color;
-                    ctx.lineWidth = this.width;
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-                    ctx.shadowColor = this.color;
-                    ctx.shadowBlur = 14;
-
-                    ctx.beginPath();
-                    ctx.moveTo(this.nodes[0].x, this.nodes[0].y);
-                    for (let i = 1; i < this.nodes.length; i++) {
-                        ctx.lineTo(this.nodes[i].x, this.nodes[i].y);
-                    }
-                    ctx.stroke();
-
-                    const head = this.nodes[this.nodes.length - 1];
-                    ctx.beginPath();
-                    ctx.arc(head.x, head.y, this.width * 0.7, 0, Math.PI * 2);
-                    ctx.fillStyle = this.color;
-                    ctx.fill();
-
-                    ctx.restore();
-                    this.branches.forEach(b => b.draw(ctx));
-                }
-            }
-
-            function triggerSymbioticBurst(newTheme, ox, oy, onMidpoint) {
-                const maxDim = Math.hypot(Math.max(ox, width - ox), Math.max(oy, height - oy)) * 1.05;
-                const isGoingDark = newTheme === 'dark';
-                const tendrilColor = isGoingDark ? '#0d1117' : '#f4f1ea';
-                const glowColor = isGoingDark ? '#00f0ff' : '#ffd166';
-
-                const tendrils = [];
-                const tendrilCount = 38;
-                for (let i = 0; i < tendrilCount; i++) {
-                    tendrils.push(new SymbioteTendril(ox, oy, isGoingDark ? (i % 2 === 0 ? '#0d1117' : '#1c2333') : (i % 2 === 0 ? '#f4f1ea' : '#fffdf9'), maxDim, 1));
-                }
-
-                let membraneRadius = 0;
-                const membraneSpeed = maxDim / 24;
-                let midpointTriggered = false;
-
-                toggleBtn.classList.add('symbiotic-pulsing');
-                setTimeout(() => toggleBtn.classList.remove('symbiotic-pulsing'), 750);
-
-                function animateStep() {
-                    ctx.clearRect(0, 0, width, height);
-
-                    membraneRadius += membraneSpeed;
-
-                    ctx.save();
-                    ctx.beginPath();
-                    const segments = 36;
-                    for (let i = 0; i <= segments; i++) {
-                        const a = (i / segments) * Math.PI * 2;
-                        const distortion = Math.sin(a * 7 + membraneRadius * 0.05) * (membraneRadius * 0.12) +
-                                           Math.cos(a * 4 - membraneRadius * 0.03) * (membraneRadius * 0.08);
-                        const r = Math.max(0, membraneRadius + distortion);
-                        const px = ox + Math.cos(a) * r;
-                        const py = oy + Math.sin(a) * r;
-                        if (i === 0) ctx.moveTo(px, py);
-                        else ctx.lineTo(px, py);
-                    }
-                    ctx.closePath();
-                    ctx.fillStyle = tendrilColor;
-                    ctx.shadowColor = glowColor;
-                    ctx.shadowBlur = 35;
-                    ctx.fill();
-                    ctx.restore();
-
-                    tendrils.forEach(t => {
-                        t.grow();
-                        t.draw(ctx);
-                    });
-
-                    if (membraneRadius >= maxDim * 0.45 && !midpointTriggered) {
-                        midpointTriggered = true;
-                        if (typeof onMidpoint === 'function') onMidpoint();
-                    }
-
-                    if (membraneRadius < maxDim * 1.25) {
-                        requestAnimationFrame(animateStep);
-                    } else {
-                        let alpha = 1;
-                        function fadeOut() {
-                            alpha -= 0.08;
-                            if (alpha > 0) {
-                                ctx.clearRect(0, 0, width, height);
-                                ctx.save();
-                                ctx.globalAlpha = alpha;
-                                ctx.fillStyle = tendrilColor;
-                                ctx.fillRect(0, 0, width, height);
-                                ctx.restore();
-                                requestAnimationFrame(fadeOut);
-                            } else {
-                                ctx.clearRect(0, 0, width, height);
-                            }
-                        }
-                        fadeOut();
-                    }
-                }
-
-                requestAnimationFrame(animateStep);
-            }
-
-            toggleBtn.addEventListener('click', () => {
-                const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-                const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                const rect = toggleBtn.getBoundingClientRect();
-                const originX = rect.left + rect.width / 2;
-                const originY = rect.top + rect.height / 2;
-                applyTheme(nextTheme, true, originX, originY);
-            });
-
-            applyTheme(savedTheme, false);
-        })();
+        SymbioticWatercolor.init({
+            canvasId: 'symbiote-canvas',
+            toggleId: 'theme-toggle',
+            labelId: 'theme-label'
+        });
 
         anime({ targets: '#admin-hub', opacity: [0, 1], translateY: [20, 0], duration: 800, easing: 'easeOutExpo' });
 
@@ -671,4 +628,5 @@
         }
     </script>
 </body>
+
 </html>
